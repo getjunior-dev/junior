@@ -45,7 +45,6 @@ import { FileChip } from './AttachmentStrip.js'
 import { ZoomableImage } from './ImageLightbox.js'
 import { ToolGroup } from './ToolGroup.js'
 import { ActionNotes } from './ActionCard.js'
-import { RuleCards } from './RuleCard.js'
 import { LearnedLines } from './LearnedLine.js'
 import { ThreadCards, useOpenThread } from './ThreadCards.js'
 import { useActions } from '../actions.js'
@@ -823,7 +822,6 @@ const Item = memo(function Item({
           <ToolCard sessionId={sessionId} item={item} />
           <ActionNotes tools={[item]} byCall={actionByCall} onNavigate={onRef} />
           <DraftJobLinks tools={[item]} onRef={onRef} />
-          <RuleCards sessionId={sessionId} tools={[item]} />
           <LearnedLines tools={[item]} />
           <ThreadCards tools={[item]} />
           <BrowserShots sessionId={sessionId} tools={[item]} />
@@ -835,7 +833,6 @@ const Item = memo(function Item({
           <ToolGroup sessionId={sessionId} item={item} />
           <ActionNotes tools={item.members} byCall={actionByCall} onNavigate={onRef} />
           <DraftJobLinks tools={item.members} onRef={onRef} />
-          <RuleCards sessionId={sessionId} tools={item.members} />
           <LearnedLines tools={item.members} />
           <ThreadCards tools={item.members} />
           <BrowserShots sessionId={sessionId} tools={item.members} />

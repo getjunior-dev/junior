@@ -20,7 +20,6 @@
  * no server counts as Junior's own here: every MCP call is sorted on its
  * merits. Pure and browser-safe.
  */
-import type { AdvanceApproval } from '../approvals/approvals.js'
 import { NO_OWN_SERVERS } from './own.js'
 import { type BranchScope, selfApproval, shellVerdict } from './policy.js'
 import type { ActionRules } from './rules.js'
@@ -37,8 +36,6 @@ export type CheckContext = {
   hints?: (toolName: string) => ToolHints | undefined
   /** where the shell stands; unknown = nulls, so `git push --force` with no branch named counts as the default one */
   scope: BranchScope
-  /** no longer read: advance approvals have nothing left to approve */
-  approvals?: readonly AdvanceApproval[]
   now: number
 }
 

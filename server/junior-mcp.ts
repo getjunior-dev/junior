@@ -15,7 +15,6 @@ import { endFocusOp, getFocusHoursOp, setFocusHoursOp } from './settings-ops.js'
 import { workspaceInfo } from './workspace/wiring.js'
 import { draftJobOp, draftJobText, tryJobOp } from './jobs/ops.js'
 import { addLinkOp, createArtifactOp, listArtifactsOp, toolResult, updateArtifactOp } from './artifacts-ops.js'
-import { listApprovalsOp } from './approvals-ops.js'
 import { proposeLearningOp } from './learnings-ops.js'
 import { proposeLearningResult } from '../core/junior/learnings.js'
 import { listPinsOp, pinNoteOp, unpinOp } from './pins-ops.js'
@@ -23,7 +22,6 @@ import { recentWork, WORKLOG_KEEP_DAYS, worklogLine } from '../core/junior/workl
 import { worklogFor } from './worklog-ops.js'
 import { forgetOp, memoryForPrompt, rememberOp } from './memory-ops.js'
 import { MEMORY_MAX_BYTES, memoryLine } from '../core/junior/memory.js'
-import { APPROVAL_WHATS, approvalFrom, describeApproval, isLive } from '../core/approvals/approvals.js'
 import { messageSessionOp, sessionByName, sessionReport, startedBy, startSessionsOp } from './session/spawn-ops.js'
 import { MAX_FORWARDED } from './attachments.js'
 
@@ -511,50 +509,6 @@ export function makeJuniorMcp(rt: WorkspaceRuntime, sessionId?: string) {
           } catch (err) {
             return errResult(errText(err))
           }
-        },
-      ),
-      // Advance approvals (core/approvals): the user's OK given before the send.
-      tool(
-        'list_approvals',
-        'The advance approvals the user has given: who + what + when you may send without a card. Live ones only unless all is true.',
-        { all: z.boolean().optional().describe('include revoked and expired ones') },
-        async (args) => {
-          const now = Date.now()
-          const list = (await listApprovalsOp(rt)).filter((a) => args.all === true || isLive(a, now))
-          return okResult(JSON.stringify(list.map((a) => ({ id: a.id, approves: describeApproval(a), what: a.what, who: a.who, when: a.when, live: isLive(a, now), uses: a.uses })), null, 2))
-        },
-      ),
-      tool(
-        'propose_approval',
-        'Propose an advance approval: one recipient + one kind of send + when, which the user may add so those sends go out without a card. It shows as a card in this chat; nothing is approved until the user presses Add. Use it when the user says to always let you send something ("you can always DM Anirudha when a PR is ready"), or after they approved the same kind of send several times. Keep it narrow: one person or channel. Look up the Slack user id (slack_search_users) or channel id (slack_search_channels) first. A send you make before they add it still shows its own card.',
-        {
-          what: z.enum(APPROVAL_WHATS as unknown as [string, ...string[]]).describe('slack-dm: DM one person · slack-post: post in one channel · request-review: ask one GitHub user to review · bot-reply: send the drafted replies to one review bot (who = its login, e.g. coderabbitai)'),
-          who: z.object({
-            id: z.string().describe('Slack user id (U…), Slack channel id (C…), or GitHub login'),
-            name: z.string().describe('what the user reads: "Anirudha", "#eng-reviews"'),
-          }),
-          when: z
-            .object({ playbook: z.string(), step: z.string() })
-            .optional()
-            .describe('only as one playbook step (e.g. babysit / request reviewer); omit for any time'),
-          why: z.string().describe('one line: why this send is safe to make without asking'),
-          expiresInDays: z.number().int().min(1).max(365).optional().describe('omit for until revoked'),
-        },
-        async (args) => {
-          const now = Date.now()
-          const raw = {
-            what: args.what,
-            who: args.who,
-            when: args.when ? { kind: 'playbook', ...args.when } : { kind: 'any' },
-            why: args.why,
-            ...(args.expiresInDays ? { expiresAt: now + args.expiresInDays * 86_400_000 } : {}),
-          }
-          const out = approvalFrom(raw, { id: 'proposal', now, sessionId: sessionId ?? null, proposalId: null })
-          if (!out.ok) return errResult(out.error)
-          return okResult(
-            `Shown to the user as a card: "${describeApproval(out.approval)}". Nothing is approved until they press Add on it. ` +
-              'Carry on; a matching send before then still shows its own card.',
-          )
         },
       ),
       // Learnings with receipts (core/junior/learnings.ts): Junior proposes, only the user keeps.
