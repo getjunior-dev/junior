@@ -48,7 +48,7 @@ export const KIND_ICON: Record<ActionKind, ComponentType<LucideProps>> = {
 /** The status pill: what happened to it, in two words at most. */
 export const STATUS_TEXT: Record<ActionView['status'], string> = {
   attempted: 'no result yet',
-  succeeded: 'went out',
+  succeeded: 'sent',
   failed: 'failed',
   denied: 'you denied it',
   needs_you: 'needs you',
@@ -75,7 +75,7 @@ export const STATUS_TONE: Record<ActionView['status'], 'green' | 'red' | 'yellow
   expired: 'mute',
 }
 
-/** Who let it run, as a short phrase ("you", "free: a draft PR", "the job’s grants"). */
+/** Who let it run, as a short phrase ("you", "Junior · sent without asking"). */
 export function allowedText(a: ActionView): string {
   switch (a.allowedBy) {
     case 'prompt':

@@ -142,8 +142,10 @@ export function ActionCard({
 
   const quick = needs && !isOpen
   const tone = STATUS_TONE[a.status]
-  // On every held card, open or closed; on a settled one only once opened.
-  const showImpact = impactShown(a.status) && (needs || isOpen)
+  // A send that went out without asking: the closed row says so, and who it reached.
+  const sentAlone = a.status === 'succeeded' && a.allowedBy === 'policy'
+  // On every held card and every send that went out alone, open or closed; on another settled one only once opened.
+  const showImpact = impactShown(a.status) && (needs || isOpen || sentAlone)
   const describedBy = showImpact ? impactId : undefined
   return (
     <Collapsible.Root
@@ -186,7 +188,7 @@ export function ActionCard({
         )}
         <span className={`pill ${tone}`}>
           {needs && <span className="dot need" aria-hidden="true" />}
-          {STATUS_TEXT[a.status]}
+          {sentAlone ? 'sent without asking' : STATUS_TEXT[a.status]}
         </span>
         {!pinnedOpen && (
           <button type="button" className="chev" aria-label={isOpen ? 'Close' : 'Open'} onClick={() => setOpen(!isOpen)}>
@@ -581,10 +583,10 @@ export function ActionNotes({
   const waiting = list.filter((a) => a.status === 'needs_you').length
   return (
     <div className="astubs">
-      {/* In a chat, a send held for you is Junior asking: say so above the stubs. */}
+      {/* Only what destroys work is held: say so above the stubs. */}
       {waiting > 0 && (
         <div className="astubsWho">
-          <JuniorLabel mood="needs" say="Nothing goes out until you approve it"> needs your OK to send {waiting === 1 ? 'this' : `these ${waiting}`}</JuniorLabel>
+          <JuniorLabel mood="needs" say="It can't be undone, so it waits for you"> needs your OK for {waiting === 1 ? 'this' : `these ${waiting}`}</JuniorLabel>
         </div>
       )}
       {list.map((a) => (

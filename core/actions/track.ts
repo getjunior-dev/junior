@@ -15,7 +15,7 @@ import type { SessionEvent } from '../../shared/protocol.js'
 import type { ActionStore } from '../store/types.js'
 import { extractLink, pushedBranch, resultText } from './link.js'
 import type { SortedAction } from './sort.js'
-import type { ActionAllowedBy, ActionRecord, ActionStatus } from './types.js'
+import { type ActionAllowedBy, type ActionRecord, type ActionStatus, SENT_WITHOUT_ASKING } from './types.js'
 
 /** Who and where: fixed for a session, read once when its tracker starts. */
 export type TrackContext = {
@@ -113,7 +113,8 @@ export function recordFor(
     tool: name,
     kind: s.kind,
     summary: s.summary,
-    args: trimArgs(input, 600, name === 'Bash' ? { command: COMMAND_CAP } : {}),
+    // Kept whole up to the cap: the Sent card shows exactly what went out.
+    args: trimArgs(input, COMMAND_CAP),
     status: 'attempted',
     link: null,
     error: null,
@@ -240,19 +241,15 @@ export class ActionTracker {
     }
   }
 
-  /** You, through a prompt; else the one policy (core/actions/policy.ts), a job's grants, a brief's policy, or an allow rule. */
+  /** You, through a prompt; else the one policy (core/actions/policy.ts): every send goes out without asking. */
   private allowedBy(p: Pending): [ActionAllowedBy, string | null] {
     if (p.prompt) return ['prompt', p.prompt.behavior === 'allow_always' ? 'always, for this session' : null]
     const rule = this.ctx.ruleFor?.(p.id)
     if (rule) return ['rule', rule]
-    if (this.ctx.sessionKind === 'job-run') return ['rule', 'the job’s grants']
     if (this.ctx.sessionKind === 'brief') return ['policy', 'brief sessions']
-    // A task's free sends (core/babysit/policy.ts): its PR's branch, a draft PR, the bot thread it fixed.
-    if (this.ctx.sessionKind === 'task')
-      return ['policy', p.sorted.kind === 'push' ? 'free: a push to your PR’s branch' : p.sorted.kind === 'pr' ? 'free: a draft PR' : 'free: a reply on the bot thread it fixed']
+    // A job run's, a task's or a chat's send that ran without a card.
     const mode = this.ctx.permissionMode
-    // A chat's send that ran without a card: the policy made it free.
-    if (mode === 'auto') return ['policy', p.sorted.kind === 'push' ? 'free: a push to your own branch' : p.sorted.kind === 'pr' ? 'free: a draft PR' : 'free']
+    if (this.ctx.sessionKind === 'job-run' || this.ctx.sessionKind === 'task' || mode === 'auto') return ['policy', SENT_WITHOUT_ASKING]
     if (mode === 'bypassPermissions') return ['mode', 'never asks']
     return ['rule', mode === 'acceptEdits' ? 'an allow rule (accept-edits mode)' : 'an allow rule']
   }

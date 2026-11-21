@@ -1,14 +1,15 @@
 /**
  * Junior's log (Junior for engineers, M2): one feed of everything Junior did,
  * across items, newest first. Two views: All, and Sent (only what left your
- * Mac). Each Sent line says who allowed it: you, a rule (an advance
- * approval), or the policy (a push to your own branch, a draft PR). The log
- * is Junior's track record, and the unread dot on the Junior tab.
+ * Mac). Each Sent line says who allowed it: the policy (every send goes out
+ * without asking), you (a destructive call you OK'd), or, on older lines, a
+ * rule (an advance approval). The log is Junior's track record, and the
+ * unread dot on the Junior tab.
  *
  * Built from records the store already keeps: actions, finished tasks, job
  * runs. Pure and browser-safe: time is always an argument.
  */
-import type { ActionAllowedBy, ActionKind, ActionStatus } from '../actions/types.js'
+import { type ActionAllowedBy, type ActionKind, type ActionStatus, SENT_WITHOUT_ASKING } from '../actions/types.js'
 import { impactShown } from '../actions/view.js'
 import { approvalIdIn } from '../approvals/approvals.js'
 import { impactLine } from '../cards/impact.js'
@@ -112,7 +113,7 @@ export function allowedOf(a: Pick<LogAction, 'allowedBy' | 'allowedDetail' | 'se
       if (approvalIdIn(d)) return { by: 'rule', text: `rule · ${d!.replace(/\s*\(#[0-9a-f]{6}\)$/, '')}` }
       return a.sessionKind === 'job-run' ? { by: 'job', text: d ?? 'the job’s grants' } : { by: 'other', text: d ?? 'an allow rule' }
     case 'policy':
-      return { by: 'free', text: d ?? 'Junior’s policy' }
+      return { by: 'free', text: d ?? SENT_WITHOUT_ASKING }
     case 'mode':
       return { by: 'other', text: d ?? 'the session’s mode' }
     default:

@@ -300,12 +300,12 @@ test('fold: a PR via Bash — attempted, then succeeded with its link; reads are
     link: 'https://github.com/acme/app/pull/42',
     error: null,
     allowedBy: 'policy',
-    allowedDetail: 'free: a draft PR',
+    allowedDetail: 'sent without asking',
     settledAt: 20,
   })
 })
 
-test('fold: who allowed it — your prompt, a job’s grants, a rule; a denial is denied', () => {
+test('fold: who allowed it — your prompt, or sent without asking; a denial is denied', () => {
   const send = { channel: 'C1', text: 'shipped' }
   const tool = 'mcp__claude_ai_Slack__slack_send_message'
   // Prompt after the call, matched by input (older logs carry no toolUseId).
@@ -325,11 +325,12 @@ test('fold: who allowed it — your prompt, a job’s grants, a rule; a denial i
   assert.equal(s.op === 'settle' && s.patch.allowedBy, null)
   // The result that follows a denial changes nothing more.
   assert.deepEqual(t.feed(result('t2', 'Denied by the user in the junior web UI.', true), 4), [])
-  // A job run's grants; a plain chat's allow rule; a failure is a failure.
+  // A job run's send went out without asking; a failure is a failure.
   t = tracker({ sessionKind: 'job-run', jobId: 'w1' })
   t.feed(use('t3', tool, send), 1)
   ;[s] = t.feed(result('t3', 'ok'), 2)
-  assert.equal(s.op === 'settle' && s.patch.allowedBy, 'rule')
+  assert.equal(s.op === 'settle' && s.patch.allowedBy, 'policy')
+  assert.equal(s.op === 'settle' && s.patch.allowedDetail, 'sent without asking')
   t = tracker()
   t.feed(use('t4', 'Bash', { command: 'git push' }), 1)
   ;[s] = t.feed(result('t4', 'remote: Permission to acme/app.git denied to bot.', true), 2)
@@ -341,14 +342,14 @@ test('fold: who allowed it — your prompt, a job’s grants, a rule; a denial i
   assert.equal(s.op === 'settle' && s.patch.status, 'denied')
 })
 
-test('fold: a task’s free sends say what they were', () => {
+test('fold: a task’s sends went out without asking', () => {
   const t = tracker({ sessionKind: 'task' })
   t.feed(use('t1', 'Bash', { command: 'git push origin HEAD:feat' }), 1)
   let [s] = t.feed(result('t1', 'ok'), 2)
-  assert.equal(s.op === 'settle' && s.patch.allowedDetail, 'free: a push to your PR’s branch')
+  assert.equal(s.op === 'settle' && s.patch.allowedDetail, 'sent without asking')
   t.feed(use('t2', 'Bash', { command: "gh api graphql -f query='mutation{resolveReviewThread(input:{threadId:\"T1\"}){thread{isResolved}}}'" }), 3)
   ;[s] = t.feed(result('t2', 'ok'), 4)
-  assert.equal(s.op === 'settle' && s.patch.allowedDetail, 'free: a reply on the bot thread it fixed')
+  assert.equal(s.op === 'settle' && s.patch.allowedDetail, 'sent without asking')
 })
 
 test('fold: an expired prompt settles as denied at once', () => {
@@ -457,12 +458,12 @@ EOF
 test('fix 1: a long Bash command is stored whole and never set aside by its own clipping', () => {
   assert.ok(LONG_PUSH.length > 700)
   const t = tracker()
-  const [a] = t.feed(use('t1', 'Bash', { command: LONG_PUSH, description: 'x'.repeat(2000) }), 1)
+  const [a] = t.feed(use('t1', 'Bash', { command: LONG_PUSH, description: 'x'.repeat(30_000) }), 1)
   assert.ok(a.op === 'attempt')
   const rec = a.op === 'attempt' ? a.record : (null as unknown as ActionRecord)
   assert.equal(rec.kind, 'push')
   assert.equal(rec.args.command, LONG_PUSH)
-  assert.match(String(rec.args.description), /… \(2000 chars\)$/)
+  assert.match(String(rec.args.description), /… \(30000 chars\)$/)
   // Even a clipped command can't hide it: the stored pattern decides.
   const clipped = { ...rec, args: trimArgs({ command: LONG_PUSH }, 600) }
   assert.ok(!overriddenOff(clipped, DEFAULT_RULES))
