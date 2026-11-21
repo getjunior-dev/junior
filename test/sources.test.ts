@@ -116,19 +116,19 @@ const offer = (over: Partial<OfferItem>): OfferItem => ({
   ...over,
 })
 
-test('offers: every source keeps the held-send reply line', () => {
+test('offers: every source keeps the same reply line', () => {
   const slack = offerFor(offer({}), 0)
-  assert.match(slack.detail, /nothing is posted until you send it/)
-  assert.match(slack.say, /Nothing gets posted until I send it/)
+  assert.match(slack.detail, /I write it and send it; you see it in the log/)
+  assert.match(slack.say, /and send it\.$/)
 
   const sentry = offerFor(offer({ source: 'sentry', id: 'sentry:1', repo: 'api-prod' }), 0)
-  assert.equal(sentry.title, 'Draft a reply to Priya on api-prod')
-  assert.match(sentry.detail, /nothing is posted until you send it/)
-  assert.match(sentry.say, /Nothing gets posted until I send it/)
+  assert.equal(sentry.title, 'Reply to Priya on api-prod')
+  assert.match(sentry.detail, /I write it and send it; you see it in the log/)
+  assert.match(sentry.say, /and send it\.$/)
 
   const gh = offerFor(offer({ source: 'github', id: 'github:o/r#12', kind: 'reply-needed', repo: 'o/r' }), 0)
-  assert.match(gh.detail, /nothing is posted until you send it/)
-  assert.match(gh.say, /Nothing gets posted until I send it/)
+  assert.match(gh.detail, /I write it and send it; you see it in the log/)
+  assert.match(gh.say, /and send it\.$/)
   assert.equal(sentry.because, 'Sentry')
 })
 

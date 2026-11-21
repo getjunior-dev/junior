@@ -38,13 +38,13 @@ test('files only', () => {
 
 test('sends only', () => {
   const s = supervisionOf({ touches: [], seenAt: null, heldSends: 2 })
-  assert.equal(s.line, '2 sends wait for your OK')
+  assert.equal(s.line, '2 actions wait for your OK')
   assert.equal(s.short, '2 sends wait')
 })
 
 test('both, joined with a middle dot, within 15 words', () => {
   const s = supervisionOf({ touches: [t('/r/a.ts', 1), t('/r/b.ts', 2), t('/r/c.ts', 3), t('/r/d.ts', 4)], seenAt: null, heldSends: 2 })
-  assert.equal(s.line, '4 files changed, not reviewed by you · 2 sends wait for your OK')
+  assert.equal(s.line, '4 files changed, not reviewed by you · 2 actions wait for your OK')
   assert.equal(s.short, '4 files not reviewed · 2 sends wait')
   assert.ok(words(s.line!) <= 15)
   assert.ok(words(supervisionLine(128, 1000).line!) <= 15)
@@ -52,7 +52,7 @@ test('both, joined with a middle dot, within 15 words', () => {
 
 test('singular forms', () => {
   const s = supervisionLine(1, 1)
-  assert.equal(s.line, '1 file changed, not reviewed by you · 1 send waits for your OK')
+  assert.equal(s.line, '1 file changed, not reviewed by you · 1 action waits for your OK')
   assert.equal(s.short, '1 file not reviewed · 1 send waits')
 })
 

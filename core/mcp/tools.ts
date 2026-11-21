@@ -45,7 +45,7 @@ export const BROWSER_SITES_ARG =
 export const HAND_OFF_TOOL = {
   name: 'hand_off_work_item',
   description:
-    "Hand one work item to Junior, by id. The user's own PR: Junior babysits it (CI, review threads, rebases). A review request: Junior does a first pass. Anything else: Junior starts its playbook (answer, debug-fix or investigate). Junior works only what is handed off, and every send still waits for the user's OK. The answer carries readiness: if a watch is off, nothing runs yet. Tell the user; only they turn it on, in Settings → Automations. To hand off something new, create it with create_work_item first and pass the id it returns.",
+    "Hand one work item to Junior, by id. The user's own PR: Junior babysits it (CI, review threads, rebases). A review request: Junior does a first pass. Anything else: Junior starts its playbook (answer, debug-fix or investigate). Junior works only what is handed off. Its sends go out without asking and show in the log; only what can't be undone waits for the user's OK. The answer carries readiness: if a watch is off, nothing runs yet. Tell the user; only they turn it on, in Settings → Automations. To hand off something new, create it with create_work_item first and pass the id it returns.",
   inputSchema: {
     type: 'object',
     properties: {
@@ -78,7 +78,7 @@ export function handOffAnswer(id: string, readiness: HandoffReadiness): string {
 export const CHECK_SEND_TOOL = {
   name: 'check_send',
   description:
-    "Ask Junior whether a call would go out as the user, before you make it. A dry run of the user's send policy: it never runs, sends or queues anything. Pass the tool name and its arguments. The answer is free (local work, a read, a push to a branch that isn't the default one, a draft PR, or a send the user approved in advance), held (it reaches a person, so it waits for the user's OK), destroys (it throws away work, so ask the user first) or refused (only the user approves sends, in the app), with one sentence why. Junior's own chats are held by this policy; anywhere else, follow the answer yourself: on held or destroys, show the user what you would send and wait.",
+    "Ask Junior whether a call would go out as the user, before you make it. A dry run of the user's send policy: it never runs, sends or queues anything. Pass the tool name and its arguments. The answer is free (local work, a read, or a send: sends go out without asking and Junior's log records each one), destroys (it deletes, closes or force-pushes the default branch, so ask the user first) or refused (only the user approves held calls, in the app), with one sentence why.",
   inputSchema: {
     type: 'object',
     properties: {
@@ -89,7 +89,7 @@ export const CHECK_SEND_TOOL = {
       },
       cwd: {
         type: 'string',
-        description: 'for Bash: the absolute folder the command runs in, so a push with no branch named is judged against the branch checked out there. Without it, such a push is held',
+        description: 'for Bash: the absolute folder the command runs in, so a force push with no branch named is judged against the branch checked out there. Without it, such a push counts as the default branch',
       },
     },
     required: ['tool'],

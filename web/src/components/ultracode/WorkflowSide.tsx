@@ -279,7 +279,7 @@ function ResultTab({ run, detail, error }: { run: WorkflowRun; detail: WorkflowD
           </table>
         </section>
       )}
-      <p className="tsNote">Workflow agents work locally. Anything that leaves this machine still waits for your OK in the main chat.</p>
+      <p className="tsNote">Workflow agents work locally. Sends happen in the main chat, where each one is logged.</p>
     </>
   )
 }

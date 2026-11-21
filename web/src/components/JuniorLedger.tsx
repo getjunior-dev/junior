@@ -31,7 +31,7 @@
  * and the close is a held send.
  *
  * Which rows a tab shows and the words on them are core/junior/ledger.ts.
- * Every verb here is local or a hand-off; sends stay held for approval.
+ * Every verb here is local or a hand-off.
  */
 import * as Collapsible from '@radix-ui/react-collapsible'
 import { ChevronRight, ExternalLink, X } from 'lucide-react'
@@ -1331,7 +1331,7 @@ function NeedLine({ need, open, onClick, onGo }: { need: NeedsRow; open: boolean
           <span className="lbl">Context</span>
           <span className="ctx">{need.meta}</span>
           <span className="lbl jr">Junior</span>
-          <span className="said">{need.kind === 'sends' ? 'These wait for your OK. Nothing goes out until you say so.' : 'I stopped here and need you before I go on.'}</span>
+          <span className="said">{need.kind === 'sends' ? 'These can’t be undone, so they wait for your OK.' : 'I stopped here and need you before I go on.'}</span>
           <div className="acts">
             <button type="button" className="btn sm primary" onClick={onGo}>
               {need.go} <Kbd>⏎</Kbd>

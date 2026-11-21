@@ -42,9 +42,9 @@ export function filesPart(n: number): string | null {
   return n > 0 ? `${n} ${plural(n, 'file', 'files')} changed, not reviewed by you` : null
 }
 
-/** `1 send waits for your OK` / `{n} sends wait for your OK`; null at zero. */
+/** `1 action waits for your OK` / `{n} actions wait for your OK`; null at zero. */
 export function sendsPart(n: number): string | null {
-  return n > 0 ? `${n} ${plural(n, 'send waits', 'sends wait')} for your OK` : null
+  return n > 0 ? `${n} ${plural(n, 'action waits', 'actions wait')} for your OK` : null
 }
 
 /** The phone row's short files part: `{n} files not reviewed`. */

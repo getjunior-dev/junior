@@ -110,11 +110,11 @@ export function verdictOf(item: VerdictItem, tasks: readonly VerdictTask[], held
         turn: 'you',
         needs,
         say: needs === 1 ? 'Junior’s draft is ready. Read it, then send.' : `${count(needs)} drafts are ready to send.`,
-        sub: 'Nothing goes out until you press Send.',
+        sub: 'It can’t be undone, so it waits for you.',
         tab: 'needs',
       }
     if (waiting.length === 0)
-      return { ...base, turn: 'you', needs, say: held === 1 ? 'One send waits for your OK.' : `${count(held)} sends wait for your OK.`, sub: rest, tab: 'needs' }
+      return { ...base, turn: 'you', needs, say: held === 1 ? 'One action waits for your OK.' : `${count(held)} actions wait for your OK.`, sub: rest, tab: 'needs' }
     return { ...base, turn: 'you', needs, say: needs === 1 ? 'One thing needs your call.' : `${count(needs)} things need your call.`, sub: rest, tab: 'needs' }
   }
 

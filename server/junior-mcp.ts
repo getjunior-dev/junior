@@ -260,7 +260,7 @@ export function makeJuniorMcp(rt: WorkspaceRuntime, sessionId?: string) {
       ),
       tool(
         'try_job',
-        'Trial-run a job once. A thread job (the default): starts one real run now, a thread from its owner\'s DM that reports back there; anything it would send waits on a card. A scan job: a dry run with the same prompt, tools and fences as a real run, nothing filed or sent; it waits (a few minutes at most) and returns what it would have filed. Use after draft_job, when the user agrees to a trial run.',
+        'Trial-run a job once. A thread job (the default): starts one real run now, a thread from its owner\'s DM that reports back there; anything it sends goes out and shows in the log. A scan job: a dry run with the same prompt, tools and fences as a real run, nothing filed or sent; it waits (a few minutes at most) and returns what it would have filed. Use after draft_job, when the user agrees to a trial run.',
         { id: z.string().describe('the job id draft_job returned') },
         async (args) => {
           try {

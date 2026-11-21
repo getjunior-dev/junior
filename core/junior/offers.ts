@@ -63,29 +63,28 @@ export function offerFor(i: OfferItem, now: number): Offer {
     const what = i.ciFailing ? 'the red check' : 'the merge conflicts'
     return {
       title: `Fix ${what} on ${ref}`,
-      detail: `${clip(i.title, 60)}. I fix it in a worktree; the push waits for you.`,
+      detail: `${clip(i.title, 60)}. I fix it in a worktree and push it; you see it in the log.`,
       because,
-      say: `Fix ${what} on ${ref} (${i.url}) in a worktree. Show me the diff; the push waits for my OK.`,
+      say: `Fix ${what} on ${ref} (${i.url}) in a worktree. Push it when it passes, and show me the diff.`,
     }
   }
   if (i.ask === 'review') {
     const who = i.author ? `${i.author}'s ` : ''
     return {
       title: `First-pass review of ${who}${ref}`,
-      detail: `Waiting ${waited(i.createdAt, now)}. I draft the comments; you edit and send.`,
+      detail: `Waiting ${waited(i.createdAt, now)}. I review it and post the comments; you see them in the log.`,
       because,
-      say: `Do a first-pass review of ${who}${ref} (${i.url}) and draft comments for me to edit. Nothing gets posted until I send it.`,
+      say: `Do a first-pass review of ${who}${ref} (${i.url}) and post the comments.`,
     }
   }
   if (i.ask === 'reply') {
-    // Every source reads the same: Junior drafts, and nothing goes out until you send it. A chat holds
-    // an outbound post (a gh comment, a Slack reply) on an approval card, so this stays true everywhere.
+    // Every source reads the same: Junior writes the reply and sends it, and the log shows it.
     const to = i.author ? ` to ${i.author}` : ''
     return {
-      title: `Draft a reply${to} on ${ref}`,
-      detail: `${clip(i.title, 60)}. I draft it; nothing is posted until you send it.`,
+      title: `Reply${to} on ${ref}`,
+      detail: `${clip(i.title, 60)}. I write it and send it; you see it in the log.`,
       because,
-      say: `Draft a reply${to} on ${ref} (${i.url}) for me to edit. Nothing gets posted until I send it.`,
+      say: `Reply${to} on ${ref} (${i.url}) and send it.`,
     }
   }
   // A to-do is named by its own words, in full in the message, so Junior can find it; anything else
@@ -129,7 +128,7 @@ export function firstOffers(items: readonly OfferItem[], opts: { slack: boolean;
   if (opts.slack) {
     out.push({
       title: "Catch Slack mentions you haven't answered",
-      detail: 'Hourly. I draft replies; nothing is posted until you send it.',
+      detail: 'Hourly. I reply, and you see every reply in the log.',
       because: 'Slack',
       say: "Every hour, catch Slack mentions I haven't answered and draft replies for me to approve.",
       intent: 'job',
@@ -235,7 +234,7 @@ export function canDoCards(f: CanDoFill): CanDoCard[] {
       id: 'draft',
       head: 'Draft it for me',
       parts: ['Draft ', { options: pick(f.drafts, ['a status update for the team']) }, ', and ', { options: ['let me edit it before it goes', 'keep it under three lines'] }, '.'],
-      note: 'Nothing is posted until you send it',
+      note: 'Every reply shows in the log',
     },
     {
       id: 'read',
@@ -388,7 +387,7 @@ const KNOWN_STARTERS: readonly KnownStarter[] = [
     title: 'Slack',
     schedule: WORKDAY_15,
     when: 'every 15 minutes in working hours',
-    line: 'Catch Slack questions you haven’t answered. Replies wait for your OK.',
+    line: 'Catch Slack questions you haven’t answered. Every reply shows in the log.',
     instruction: 'Find the Slack messages that need me: questions I have not answered, and mentions. One item per thread.',
   },
   {
@@ -451,7 +450,7 @@ const KNOWN_STARTERS: readonly KnownStarter[] = [
     title: 'Gmail',
     schedule: WORKDAY_HOURLY,
     when: 'every hour in working hours',
-    line: 'Catch email that asks something of you. Replies wait for your OK.',
+    line: 'Catch email that asks something of you. Every reply shows in the log.',
     instruction: 'Find emails from people (not newsletters or alerts) that ask me something I have not answered. One item per thread.',
   },
 ]

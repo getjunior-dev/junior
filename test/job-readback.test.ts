@@ -43,20 +43,20 @@ test('a send tool in the grants is read back as a send, held for you', () => {
   g.tools.push(mcpToolName('claude.ai Slack', 'slack_send_message'))
   const r = readbackOf(spec({ tools: [g] }), ctx)
   assert.equal(row(r, 'Reads')?.value, 'Slack, code in acme/web')
-  assert.equal(row(r, 'Sends')?.value, 'Slack messages. Held for you.')
+  assert.equal(row(r, 'Sends')?.value, 'Slack messages. Goes out on its own, logged.')
   assert.equal(row(r, 'Sends')?.quiet, undefined)
 })
 
 test('two kinds on one server join with "and"; servers with only sends are not in Reads', () => {
   const r = readbackOf(spec({ tools: [builtinGrant('github'), mcp('claude.ai Linear', 'save_issue', 'update_issue')] }), ctx)
   assert.equal(row(r, 'Reads')?.value, 'GitHub (read only), code in acme/web')
-  assert.equal(row(r, 'Sends')?.value, 'Linear tickets and updates. Held for you.')
+  assert.equal(row(r, 'Sends')?.value, 'Linear tickets and updates. Goes out on its own, logged.')
 })
 
 test('an unknown verb counts as a send: the words never promise less than the gate', () => {
   const r = readbackOf(spec({ tools: [mcp('Sentry', 'list_issues', 'frobnicate_issue')] }), ctx)
   assert.equal(row(r, 'Reads')?.value, 'Sentry, code in acme/web')
-  assert.equal(row(r, 'Sends')?.value, 'Sentry changes. Held for you.')
+  assert.equal(row(r, 'Sends')?.value, 'Sentry changes. Goes out on its own, logged.')
 })
 
 test('files-write writes in the project; the web and GitHub lead Reads', () => {
@@ -118,7 +118,7 @@ test('the job chat asks for numbered steps and one question before the trial run
   assert.ok(JOBS_SECTION.indexOf('After draft_job, send ONE message before any trial run') > JOBS_SECTION.indexOf('Draft it with draft_job'))
   assert.match(JOBS_SECTION, /Each run will:/)
   // a thread job's trial opens one real thread; a scan's is a dry run
-  assert.match(JOBS_SECTION, /Run a trial now\? It opens one thread now;\s+anything\s+it would send waits for your OK\. Suggested: yes\./)
+  assert.match(JOBS_SECTION, /Run a trial now\? It opens one thread now;\s+anything\s+it sends goes out and shows in the log\. Suggested: yes\./)
   assert.match(JOBS_SECTION, /Run a trial now\? It files and sends\s+nothing\. Suggested: yes\./)
   assert.match(JOBS_SECTION, /Don't restate what it may touch or when it runs/)
   assert.doesNotMatch(JOBS_SECTION, /24\/7|walk away/)
@@ -131,7 +131,7 @@ test('the job chat asks for numbered steps and one question before the trial run
    what it reports back (or files, for a scan). Open it with "Each run will:".
    Don't restate what it may touch or when it runs: draft_job shows the user those lines from the file,
    under the call. End with one question and your suggested answer: for a thread job "Run a trial now? It opens one thread now; anything
-   it would send waits for your OK. Suggested: yes.", for a scan "Run a trial now? It files and sends
+   it sends goes out and shows in the log. Suggested: yes.", for a scan "Run a trial now? It files and sends
    nothing. Suggested: yes."
 5. Call try_job only after they say yes, so they see one real run before they turn it on.`,
   )

@@ -32,7 +32,7 @@ test('the artifact names the PR, the head, the verdict and each comment’s plac
   assert.match(md, /### `src\/auth\/cache.ts:42`\n\nThis map never evicts/)
   assert.match(md, /### `src\/auth\/cache.ts:10` \(old side\)/)
   assert.match(md, /## Not read\n\nGenerated files/)
-  assert.match(md, /Nothing is posted until you OK it/)
+  assert.match(md, /posted on its own as written/)
 })
 
 test('verdicts', () => {

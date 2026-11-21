@@ -88,7 +88,7 @@ export function answerPrompt(item: WorkItem, project: { name: string; path: stri
     '## How you work here',
     `- ${readSource(item)}`,
     `- The folder ${project.path} (${project.name}) is the user's code. Read it (Read, Grep, Glob, git log/show) when the question is about it: answer from what the code says, not from memory.`,
-    '- Read-only. Change no file, send nothing, post nothing: those are refused. The reply goes out only when the user sends it.',
+    '- Read-only. Change no file, send nothing, post nothing: those are refused. Junior sends the reply you hand in.',
     '',
     itemBlock(item, item.memory),
     '',

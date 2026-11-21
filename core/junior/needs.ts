@@ -39,7 +39,7 @@ export type NeedsRow = {
 /** A session held on a prompt. */
 export type BlockedSource = { id: string; title: string; waitingOn?: string; at: number }
 
-/** Sends one session drafted that wait for your OK (queued actions). */
+/** Actions one session held for your OK: they destroy work (queued actions). */
 export type SendsSource = { sessionId: string; origin: string; titles: string[]; at: number }
 
 /** A team run waiting on you: its card (proposed), a gate, or a change to its plan. */
@@ -74,7 +74,7 @@ export function waitingOnText(waitingOn: string | undefined): string {
 /** "PR #486 and a reply to Marcus wait for your OK". */
 export function sendsTitle(titles: readonly string[]): string {
   const t = titles.filter(Boolean)
-  if (t.length === 0) return 'A send waits for your OK'
+  if (t.length === 0) return 'An action waits for your OK'
   if (t.length === 1) return `${t[0]} waits for your OK`
   if (t.length === 2) return `${t[0]} and ${t[1]} wait for your OK`
   return `${t[0]} and ${t.length - 1} more wait for your OK`

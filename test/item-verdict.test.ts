@@ -30,11 +30,11 @@ const ROWS: Row[] = [
   ['ask: Junior drafting', ask, [jr('running', 'answer', 'Draft a reply to Niraj')], 0,
     { turn: 'junior', tab: 'sessions', handedOff: true }],
   ['ask: draft ready', ask, [jr('done', 'answer'), you('send-reply')], 0,
-    { turn: 'you', needs: 1, say: 'Junior’s draft is ready. Read it, then send.', sub: 'Nothing goes out until you press Send.', tab: 'needs' }],
+    { turn: 'you', needs: 1, say: 'Junior’s draft is ready. Read it, then send.', sub: 'It can’t be undone, so it waits for you.', tab: 'needs' }],
   // the edges
   ['to-do: fresh', todo, [], 0, { turn: 'you', needs: 1, say: 'This one’s yours. Nobody’s on it.', tab: 'needs' }],
   ['PR: nobody watching', pr, [], 0, { say: 'Your PR. Junior isn’t watching it.', tab: 'needs' }],
-  ['a send held, nothing else', todo, [jr('done', 'debug-fix')], 1, { turn: 'you', needs: 1, say: 'One send waits for your OK.', sub: 'Nothing else is moving.' }],
+  ['a send held, nothing else', todo, [jr('done', 'debug-fix')], 1, { turn: 'you', needs: 1, say: 'One action waits for your OK.', sub: 'Nothing else is moving.' }],
   ['a held send plus a question', ask, [jr('waiting', 'investigate')], 2, { needs: 3, say: 'Three things need your call.' }],
   ['done', { ...pr, status: 'done' }, [jr('waiting')], 0, { turn: 'idle', needs: 0, say: 'Done.', tab: 'activity' }],
   ['others’ turn, not handed off', { ...ask, flow: { stage: 'review', turn: 'others', since: 0 } }, [], 0,

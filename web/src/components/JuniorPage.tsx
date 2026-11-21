@@ -770,8 +770,8 @@ function HomeComposer({
 function firstOpenLine(voice: string): string {
   if (voice === 'terse') return 'Runs on this Mac, with your logins. Reads back, asks once, sends nothing without OK. I can see:'
   if (voice === 'warm')
-    return "I work right here on your Mac, with your tools and logins. I'll always read back what you ask, bundle my questions into one message, and never send anything without your OK. Here's what I can see so far:"
-  return "I work on this Mac with your tools and logins. I read back what you ask, put every question in one message with my best guess, and nothing leaves without your OK. Here's what I can see:"
+    return "I work right here on your Mac, with your tools and logins. I'll always read back what you ask, bundle my questions into one message, and log everything I send. Here's what I can see so far:"
+  return "I work on this Mac with your tools and logins. I read back what you ask, put every question in one message with my best guess, and everything I send shows in the log. Here's what I can see:"
 }
 
 export type { JuniorDay }

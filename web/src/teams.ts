@@ -95,7 +95,7 @@ export function stepLine(s: { id: string; agent: string; output: string | null; 
 /** The two levels a team can run at (TeamPermissions), as the card offers them. */
 export const PERMISSION_META: Record<TeamPermissions, { label: string; hint: string }> = {
   ask: { label: 'Commands ask', hint: 'The builder’s edits run; every shell command asks you. You stay at the desk.' },
-  local: { label: 'Local free, outbound held', hint: 'Edits and commands run unasked. Anything that leaves this Mac waits for you.' },
+  local: { label: 'Runs unasked', hint: 'Edits, commands and sends run unasked, and every send is logged. Deletes wait for you.' },
 }
 
 type TeamGoalsState = { goals: TeamGoalSummary[]; waitingOnYou: number; loaded: boolean; error: string | null }

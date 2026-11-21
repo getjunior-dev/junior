@@ -105,5 +105,5 @@ export const closeMoreLabel = (n: number): string => (n === 1 ? '1 more quiet PR
 export const CLOSE_HINT = 'Quiet for 30 days, or replaced by a merged PR. Nothing is drafted until you ask.'
 export const CLOSE_ONLY_EMPTY = 'No active PRs. The quiet ones are below.'
 export const KEEP_TITLE = 'Keep it open. I won’t ask again for 30 days.'
-export const CLOSE_TITLE = 'Opens a chat. I draft the note, and it waits for your OK.'
+export const CLOSE_TITLE = 'Opens a chat. I write the note and close it; you see it in the log.'
 export const keptSaid = (title: string): string => `Kept open: ${title}. I won’t ask again for 30 days.`

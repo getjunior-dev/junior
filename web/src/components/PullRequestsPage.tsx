@@ -118,7 +118,7 @@ export function PullRequestsPage({ onNavigate }: { onNavigate: (hash: string) =>
     <div className="page prPage">
       <div className="inner">
         <h1 className="prH1">Pull requests</h1>
-        <p className="prSub">Yours, and the ones waiting on your review. Nothing goes out until you approve it.</p>
+        <p className="prSub">Yours, and the ones waiting on your review. Everything Junior sends shows in the log.</p>
 
         <h2 className="agH">
           Mine <span className="tsN">{mine.length}</span>

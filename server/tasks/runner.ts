@@ -512,12 +512,12 @@ function submitTaskTool(rt: WorkspaceRuntime, sessionId: string) {
  * an unknown verdict, an unsure one, or a reply verdict without a reply is a
  * fix (core/babysit/bot-triage.ts), never a schema error Junior has to argue
  * with. Fix verdicts become fix-thread tasks; every verdict stays on the
- * task's output, where the drafted replies wait for the user. Nothing is sent.
+ * task's output; the replies go out on their own. Nothing is sent from the session.
  */
 function submitTriageTool(rt: WorkspaceRuntime, sessionId: string) {
   return tool(
     'submit_triage',
-    "Hand in your verdict on each bot comment, once, at the end: fix, wont-fix or incorrect, with a drafted reply for wont-fix and incorrect. Unsure is fix. Nothing is sent: fixes become tasks, replies wait for the user. Then end your turn.",
+    "Hand in your verdict on each bot comment, once, at the end: fix, wont-fix or incorrect, with a drafted reply for wont-fix and incorrect. Unsure is fix. Fixes become tasks; Junior sends the replies as you wrote them. Then end your turn.",
     {
       verdicts: z
         .array(
@@ -726,12 +726,12 @@ function submitPlanTool(rt: WorkspaceRuntime, sessionId: string) {
 /**
  * A first pass's one tool: the verdict, the summary and the comments. The
  * pass becomes the Review artifact on the item and the task's line, and
- * posting it becomes a task on you, held for your OK.
+ * it is posted on its own once handed in; a failed post waits on you.
  */
 function submitReviewTool(rt: WorkspaceRuntime, sessionId: string) {
   return tool(
     'submit_review',
-    'Hand in your first-pass review, once, at the end: the verdict, a 2–4 line summary, and the comments you suggest. Nothing is posted: the user reads it first. Then end your turn.',
+    'Hand in your first-pass review, once, at the end: the verdict, a 2–4 line summary, and the comments you suggest. Junior posts it on the PR as written, and the user sees it in the log. Then end your turn.',
     {
       verdict: z.enum(['approve', 'comment', 'request_changes']),
       summary: z.string().min(1).max(1200).describe('2–4 plain lines: what the PR does, and what matters most in your read'),

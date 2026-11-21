@@ -1,7 +1,7 @@
 /**
  * Send lanes for chat agents (core/junior/agents.ts): `sends:` names what an
  * agent may propose on its own; anything else it sends only when the user
- * asks, and every send still waits on a card. An agent without Bash keeps a
+ * asks, and every send goes out logged. An agent without Bash keeps a
  * shell for sends only (core/actions/policy.ts sendOnlyShell). Untouched
  * starters follow the upgrade to lanes; edited ones are kept.
  */
@@ -35,13 +35,13 @@ test('merge is in no starter’s lane', () => {
   for (const n of ['babysitter', 'debugger', 'explainer', 'reviewer', 'writer']) assert.ok(!agentSends(agent(n)).includes('merge'), n)
 })
 
-test('the prompt: in-lane sends on its own, anything the user asks is made and waits on a card', () => {
+test('the prompt: in-lane sends on its own, anything the user asks is made and goes out logged', () => {
   const p = agentAppend(agent('reviewer'), 'Junior')
   assert.match(p, /In your lane: a GitHub review, a GitHub comment\./)
   assert.match(p, /only when the user asks for it in this chat\. Never unprompted\./)
   assert.match(p, /make the call yourself/)
   assert.match(p, /Don't refuse it/)
-  assert.match(p, /waits on a card for the user's OK, word for word/)
+  assert.match(p, /goes out without a card, and shows in the log/)
   assert.match(p, /in the user's voice/)
   // the rules come after the agent's own prompt, so its old "never post" line can't win
   assert.ok(p.indexOf('body') < p.indexOf('### Sends'))

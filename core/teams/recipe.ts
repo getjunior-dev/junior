@@ -92,8 +92,8 @@ export type TeamRecipe = {
 /**
  * How much a team's workers do without asking, chosen per run on the card:
  * - `ask`, the builder's file edits run; every shell command asks you
- * - `local`, edits and shell commands run; anything that leaves this machine is held for you
- * `everything`, from older files and runs, is read as `local`: a send always waits for you.
+ * - `local`, edits and shell commands run; sends go out and are logged, deletes wait for you
+ * `everything`, from older files and runs, is read as `local`.
  * In every mode a worker's push, PR or comment from the shell is refused:
  * the team hands work in, it never sends it.
  */

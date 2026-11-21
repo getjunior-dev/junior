@@ -19,7 +19,7 @@ export type Readback = {
 }
 
 /** The tail every Sends row with a send carries: the run's hold stops each one. */
-export const HELD_FOR_YOU = 'Held for you.'
+export const HELD_FOR_YOU = 'Goes out on its own, logged.'
 
 /** "nothing" and "none" read quiet: present, never hidden, but not loud. */
 const QUIET = new Set(['nothing', 'none'])

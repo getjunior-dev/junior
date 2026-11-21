@@ -61,7 +61,7 @@ export function passMarkdown(pr: ReviewPrRef, p: FirstPass): string {
     for (const c of p.comments) out.push('', `### \`${c.path}:${c.line}\`${c.side === 'LEFT' ? ' (old side)' : ''}`, '', c.body.trim())
   }
   if (p.skipped?.trim()) out.push('', '## Not read', '', p.skipped.trim())
-  out.push('', '_A first pass by Junior. Nothing is posted until you OK it on the item._')
+  out.push('', '_A first pass by Junior, posted on its own as written._')
   return out.join('\n')
 }
 

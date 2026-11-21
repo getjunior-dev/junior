@@ -147,7 +147,7 @@ export function JuniorAbout({ routines, onNavigate, onView }: Props) {
 
       {/* TODO(junior): earned-trust rules need Samar's decision. */}
       <h2 className="jrLh">What I may do without asking</h2>
-      <p className="jrEmpty">Nothing yet. Everything waits for your OK.</p>
+      <p className="jrEmpty">Sends go out on their own and show in the log. Only what can’t be undone waits for your OK.</p>
 
       <h2 className="jrLh">Routines you taught me</h2>
       {routines === null ? (

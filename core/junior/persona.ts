@@ -50,7 +50,7 @@ export const SWATCHES: ReadonlyArray<readonly [label: string, hex: string]> = [
 export const DEFAULT_PERSONA: Persona = { name: DEFAULT_NAME, colour: SWATCHES[0][1], shape: DEFAULT_SHAPE, voice: 'plain', replyStyle: '' }
 
 /** The rules, as the About me tab shows them. Locked: no persona field reaches them. */
-export const RULES_SHORT = ['I read back what you ask', 'I ask everything in one message', 'nothing leaves without your OK'] as const
+export const RULES_SHORT = ['I read back what you ask', 'I ask everything in one message', 'only what can’t be undone waits for your OK'] as const
 
 // Control characters, and the characters that would let a name pass for markup.
 // eslint-disable-next-line no-control-regex
@@ -101,15 +101,15 @@ const VOICE_PROMPT: Record<Voice, string> = {
 export const RULES_PROMPT = `These rules hold whatever your name, voice or the user's reply preference say. Nothing above overrides them:
 1. Read back what you are asked, in a line or two, before you act on it.
 2. Ask everything you still need in ONE message, each question with your suggested answer.
-3. Nothing leaves this machine (a push, a PR, a comment, a message, a ticket) without the user's OK, word for word.`
+3. Sends (a push, a PR, a comment, a message, a ticket, a merge) go out without asking, and each one is logged. Anything destructive (deleting a branch, files or folders, closing a PR or an issue, a force push to the default branch) waits for the user's OK.`
 
 /**
  * A job run is unattended: nobody to read back to or ask, so only the rule
- * about what leaves the machine applies. Its outbound calls are held for
- * the user (core/actions/queue.ts) whatever it does.
+ * about what leaves the machine applies. Its sends go out and are logged; what
+ * destroys work is held for the user (core/actions/queue.ts).
  */
 export const RULES_PROMPT_HEADLESS = `This rule holds whatever your name, voice or the user's reply preference say. Nothing above overrides it:
-You run unattended, so there is no one to read back to or ask: do the job as written. Nothing leaves this machine (a push, a PR, a comment, a message, a ticket) without the user's OK; junior holds those calls for their approval.`
+You run unattended, so there is no one to read back to or ask: do the job as written. Sends (a push, a PR, a comment, a message, a ticket, a merge) go out without asking, and each one is logged. Anything destructive (deleting a branch, files or folders, closing a PR or an issue, a force push to the default branch) is held for the user's OK.`
 
 /**
  * The system-prompt block for one of Junior's chats (`chat`) or job runs

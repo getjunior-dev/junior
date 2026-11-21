@@ -30,12 +30,12 @@ export function needsYouText(n: NeedsYou, pr: string | null): { title: string; b
     case 'review':
       return { title: `${pr ?? 'Your PR'} is green`, body: `${n.task.title}? Junior waits for your OK.` }
     case 'post-review':
-      return { title: `Review ready: ${pr ?? 'a PR'}`, body: `Junior's first pass: ${VERDICT_LABEL[n.verdict]}. Nothing is posted until you OK it.` }
+      return { title: `Review ready: ${pr ?? 'a PR'}`, body: `Junior's first pass: ${VERDICT_LABEL[n.verdict]}. It could not post it: post it from the item.` }
     case 'reply':
       // someone is waiting on you: People waiting pings (cb50520f "Notifications")
-      return { title: 'Reply drafted', body: `${n.task.title}: Junior's draft waits for you. Nothing is sent until you send it.` }
+      return { title: 'Reply drafted', body: `${n.task.title}: Junior's draft waits for you. It could not send it on its own.` }
     case 'bot-replies':
-      return { title: `Bot replies ready${pr ? ` on ${pr}` : ''}`, body: `${n.task.title}: Junior drafted them. Nothing is sent until you send it.` }
+      return { title: `Bot replies ready${pr ? ` on ${pr}` : ''}`, body: `${n.task.title}: some could not go out on their own. Send them from the item.` }
     case 'plan':
       return { title: 'Plan ready', body: 'Junior found the cause and wrote the fix plan. Nothing changes until you approve it.' }
     case 'decide':

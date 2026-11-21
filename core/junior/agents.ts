@@ -23,8 +23,8 @@
  * (a Reviewer's review comments, a Babysitter's push): those it may propose
  * on its own when the job calls for one. Anything else it sends only when the
  * user asks for it in that chat, never unprompted. Either way the call goes
- * through the one policy (core/actions/policy.ts) and waits on a card: lanes
- * decide what an agent may propose, the card decides what leaves.
+ * through the one policy (core/actions/policy.ts): it goes out without a card
+ * and is logged, so the lane is what decides what an agent sends unprompted.
  *
  * Pure and browser-safe: the server lists and spawns with it, the web draws
  * faces and names with it.
@@ -222,8 +222,8 @@ export const shellSendOnly = (a: Pick<ChatAgent, 'tools'> | null | undefined): b
 
 /**
  * The lane and the ask, as the agent reads them: what it may propose on its
- * own, and that a send the user asks for is made, not refused, and waits on
- * a card either way.
+ * own, and that a send the user asks for is made, not refused, and goes out
+ * logged either way.
  */
 export function sendsAppend(a: Pick<ChatAgent, 'slug' | 'sends'>, juniorName: string): string {
   const lane = agentSends(a)
@@ -234,7 +234,7 @@ export function sendsAppend(a: Pick<ChatAgent, 'slug' | 'sends'>, juniorName: st
       ? `In your lane: ${named.join(', ')}. Propose one of these on your own only when your job calls for it.`
       : `Nothing is in your lane: never propose a send on your own.`,
     `Outside your lane, make a send only when the user asks for it in this chat. Never unprompted.`,
-    `When the user asks you to send, post, reply, push or merge, make the call yourself: the Slack connector, or gh and git in the shell. Don't refuse it, and don't hand it to another agent or back to ${juniorName}. It waits on a card for the user's OK, word for word.`,
+    `When the user asks you to send, post, reply, push or merge, make the call yourself: the Slack connector, or gh and git in the shell. Don't refuse it, and don't hand it to another agent or back to ${juniorName}. It goes out without a card, and shows in the log.`,
     `A Slack message you write goes out in the user's voice: short sentences, common words, no preamble.`,
   ].join('\n')
 }

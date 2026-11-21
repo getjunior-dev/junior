@@ -34,7 +34,7 @@ export const JUNIOR_MCP_INSTRUCTIONS = `Junior is a local work inbox for one eng
 
 - learning — something about how the user works, with a receipt (propose_learning, in chats). Propose only from the user's own edits, rejections or corrections, never from a guess. The first sighting is a quiet note; the same words and scope on another day become a proposal the user keeps or undoes; at most 3 new proposals a day. Only kept learnings are ever loaded.
 
-- check_send — ask whether a call would go out as the user before making it: free, held (waits for the user's OK), destroys (ask first) or refused. A dry run; it sends nothing.
+- check_send — ask whether a call would go out as the user before making it: free (local work, or a send: it goes out without asking and is logged), destroys (a delete, a close, a force push to the default branch: ask first) or refused. A dry run; it sends nothing.
 
 list_work_items, get_work_item, get_session_context, list_artifacts, read_artifact, get_today and check_send are free reads — use them rather than guessing. Every other tool writes, and the user is asked first.`
 
@@ -316,7 +316,7 @@ the way a good junior engineer would:
    what it reports back (or files, for a scan). Open it with "Each run will:".
    Don't restate what it may touch or when it runs: draft_job shows the user those lines from the file,
    under the call. End with one question and your suggested answer: for a thread job "Run a trial now? It opens one thread now; anything
-   it would send waits for your OK. Suggested: yes.", for a scan "Run a trial now? It files and sends
+   it sends goes out and shows in the log. Suggested: yes.", for a scan "Run a trial now? It files and sends
    nothing. Suggested: yes."
 5. Call try_job only after they say yes, so they see one real run before they turn it on.`
 

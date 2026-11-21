@@ -58,7 +58,7 @@ export function frameJobMessage(mark: JobRunMark, instruction: string): string {
   const lines = [
     `[Job run: "${mark.title}"${mark.every ? `, ${mark.every}` : ''}. Run ${TRIGGER_TEXT[mark.trigger]} at ${when}.`,
     'This is a scheduled run of a job the user set up, not a message the user typed. Nobody is watching live: do the job as written, without asking first.',
-    'Anything that leaves this machine (a comment, a message, a push) is held on a card for the user, as always.',
+    'Sends (a comment, a message, a push) go out without asking, and each is logged. Anything destructive (a delete, a close, a force push to the default branch) is held for the user.',
     `If there is nothing to do this time, reply with exactly "${NOTHING_NEW}" and stop. That reply stays quiet: the user does not hear about it.`,
     'Otherwise start your last reply with one plain sentence that says the outcome; your DM shows only that sentence. Details after it.',
     'Earlier runs of this job may have handled some of what you find. Before working one thing (a PR, an error, a thread), call job_seen with its link; skip it if an earlier run handled it. After you handle it, call job_handled with the link, so later runs skip it too.',

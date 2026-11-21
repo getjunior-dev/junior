@@ -82,7 +82,7 @@ export type TurnReason =
 /** Every reason, its turn, and a short line for a muted reason column. */
 export const TURN_REASONS: Record<TurnReason, { turn: WhoseTurn; text: string }> = {
   'session-blocked': { turn: 'you', text: 'A chat waits on your answer' },
-  'held-send': { turn: 'you', text: 'A send waits for your OK' },
+  'held-send': { turn: 'you', text: 'An action waits for your OK' },
   'junior-asks': { turn: 'you', text: 'Junior is paused on you' },
   'first-pass-ready': { turn: 'you', text: 'First pass waits for your OK' },
   'task-on-you': { turn: 'you', text: 'A task waits on you' },

@@ -138,7 +138,7 @@ export function TeamSidebar(p: Props) {
       // Sends from a thread are that thread's row; the rest (a DM's, a job's scan) count on their own.
       const shown = new Set(waiting.map((t) => t.id))
       for (const r of day.needs) if (r.kind === 'sends' && !shown.has(r.target.id)) needs.push({ title: r.title })
-    } else for (let i = 0; i < p.pendingSends; i++) needs.push({ title: p.pendingSends === 1 ? 'A send waits for your OK' : 'a send waits for your OK' })
+    } else for (let i = 0; i < p.pendingSends; i++) needs.push({ title: p.pendingSends === 1 ? 'An action waits for your OK' : 'an action waits for your OK' })
     const broken = threads.find((t) => t.state === 'stopped')
     const alert = inbox.alerts[0]
     const stuck = broken ? { title: `${labelOf(broken.agent)} stopped on ${broken.title}` } : alert ? { title: alert.title } : null

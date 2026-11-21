@@ -469,7 +469,7 @@ export function draftJobText(d: DraftedJob, canTry = false): string {
     ...(d.schedulerOff ? [`note: ${SCHEDULER_OFF}`] : []),
     ...(d.mode === 'thread' ? [`Each run opens a thread from ${d.owner}'s DM and reports back there, like any thread.`] : []),
     canTry && d.mode === 'thread'
-      ? `Now send ONE message: what each run does, as a numbered list, then one question with your suggested answer: "Run a trial now? It opens one thread under ${d.owner} now; anything it would send waits for your OK. Suggested: yes." Call try_job only after they say yes. Do not claim it is running.`
+      ? `Now send ONE message: what each run does, as a numbered list, then one question with your suggested answer: "Run a trial now? It opens one thread under ${d.owner} now; anything it sends goes out and shows in the log. Suggested: yes." Call try_job only after they say yes. Do not claim it is running.`
       : canTry
       ? 'Now send ONE message: what each run does, as a numbered list, then one question with your suggested answer: "Run a trial now? It files and sends nothing. Suggested: yes." Call try_job only after they say yes. Do not claim it is running.'
       : 'Tell the user it is drafted and waiting for their review — do not claim it is running.',
@@ -498,7 +498,7 @@ export async function tryJobOp(rt: WorkspaceRuntime, raw: unknown): Promise<stri
     return [
       state === 'running'
         ? `“${job.title}” is running already; its thread is under ${owner}'s DM.`
-        : `ok: started a trial run of “${job.title}”. It opens a thread from ${owner}'s DM and reports back there when its first turn ends. Anything it would send waits on a card.`,
+        : `ok: started a trial run of “${job.title}”. It opens a thread from ${owner}'s DM and reports back there when its first turn ends. Anything it sends goes out and shows in the log.`,
       `The job is ${job.enabled ? 'on' : 'still OFF'}: this was one run, not the schedule. If the thread's work looks right, the user turns it on at #/jobs/${job.id}.`,
       ...schedulerOff,
     ].join('\n')

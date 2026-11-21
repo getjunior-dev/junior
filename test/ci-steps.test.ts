@@ -263,8 +263,8 @@ test('the fix-ci prompt names only the runnable steps (snapshot)', () => {
 
 ## How you work here
 - This folder is your own worktree, on a local branch made from origin/feat/retries. The user's checkout is never touched.
-- Push with \`git push origin HEAD:feat/retries\` (after a rebase: \`git push --force-with-lease origin HEAD:feat/retries\`). Those run without asking. Plain --force, other branches and implicit pushes are refused.
-- Anything else that reaches a person (a PR comment, a reviewer request, marking ready, a merge) is held for the user's OK. Don't try those here.
+- Push with \`git push origin HEAD:feat/retries\` (after a rebase: \`git push --force-with-lease origin HEAD:feat/retries\`). Those run without asking. Other branches, the default branch and implicit pushes are refused.
+- Anything else that reaches a person (a PR comment, a reviewer request, marking ready) goes out on its own and is logged. Merge only when the user asks.
 - Keep the change to what the task needs. One commit with a plain message is best.
 
 ## The task

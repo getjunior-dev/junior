@@ -49,7 +49,7 @@ export function WaitingButton() {
           {sends > 0 && (
             <button type="button" className="waitRow" onClick={() => go('/junior/log')}>
               <span className="dot sm orange" aria-hidden="true" />
-              <span className="t">{sends === 1 ? '1 send waits for your OK' : `${sends} sends wait for your OK`}</span>
+              <span className="t">{sends === 1 ? '1 action waits for your OK' : `${sends} actions wait for your OK`}</span>
               <span className="why">Log</span>
             </button>
           )}
