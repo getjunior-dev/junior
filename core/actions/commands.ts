@@ -14,7 +14,6 @@
  * Pure and browser-safe.
  */
 import { pushRefs, splitCommand, unwrap, type CommandPart } from './bash.js'
-import { type BranchScope, isDefault } from './policy.js'
 
 /** `gh`/`git` read verbs: the only shell a brief may run. */
 export const GIT_READ_RE =
@@ -34,6 +33,18 @@ export function readOnlyCommand(cmd: string): boolean {
   if (GIT_READ_RE.test(cmd)) return true
   if (!LOOKUP_RE.test(cmd)) return false
   return !(/^\s*find\b/.test(cmd) && FIND_ACTS_RE.test(cmd))
+}
+
+/** Where a session's shell stands: what a force push is judged against. */
+export type BranchScope = {
+  /** the checked-out branch, null when detached or unknown */
+  current: string | null
+  /** the repo's default branch, null when unknown (then main and master count as default) */
+  defaultBranch: string | null
+}
+
+export function isDefault(branch: string, s: BranchScope): boolean {
+  return s.defaultBranch ? branch === s.defaultBranch : branch === 'main' || branch === 'master'
 }
 
 const has = (part: CommandPart, ...flags: string[]) => part.some((w) => flags.includes(w))
@@ -64,8 +75,11 @@ function apiDeletes(part: CommandPart): boolean {
   })
 }
 
-/** Why a `git push` destroys work: it deletes on the remote, or forces the default branch. */
-function pushDestroys(part: CommandPart, s: BranchScope): string | null {
+/** Words before the program that point git at another repo: `GIT_DIR=…`, `env -C dir`. */
+const ELSEWHERE_PREFIX = (t: string): boolean => /^GIT_(DIR|WORK_TREE)=/.test(t) || t === '-C' || t.startsWith('--chdir')
+
+/** Why a `git push` destroys work: it deletes on the remote, or forces the default branch. `raw`: the part before unwrap. */
+function pushDestroys(raw: CommandPart, part: CommandPart, s: BranchScope): string | null {
   const at = part.indexOf('push')
   const rest = part.slice(at + 1)
   if (rest.some((w) => PUSH_DELETES.includes(w) || w.startsWith('--prune='))) return 'deletes on the remote'
@@ -74,10 +88,13 @@ function pushDestroys(part: CommandPart, s: BranchScope): string | null {
   const forced = rest.some((w) => w === '--force' || w.startsWith('--force-with-lease') || w.startsWith('+') || (FORCE_RE.test(w) && !w.startsWith('--')))
   if (!forced) return null
   // A force push rewrites history: free on your own branch, never on the default one, nor where we can't tell.
-  const refs = pushRefs(part)
+  // The checked-out branch counts only when git runs in the session's own folder.
+  const prefix = raw.slice(0, raw.length - part.length)
+  const elsewhere = part.slice(0, at).some((t) => t === '-C' || t.startsWith('--git-dir') || t.startsWith('--work-tree')) || prefix.some(ELSEWHERE_PREFIX)
+  const refs = pushRefs(raw)
   const rewritesDefault = refs.some((r) => {
     if (r === 'unknown') return true
-    const target = r === 'current' ? s.current : r.branch
+    const target = r === 'current' ? (elsewhere ? null : s.current) : r.branch
     return !target || isDefault(target, s)
   })
   return rewritesDefault ? 'force-pushes the default branch' : null
@@ -101,7 +118,7 @@ function destroys(raw: CommandPart, s: BranchScope): string | null {
     if (sub === 'tag' && part.some((w) => w === '--delete' || w === '-d')) return 'deletes a tag'
     if (sub === 'stash' && (part[2] === 'drop' || part[2] === 'clear')) return 'deletes stashed work'
     if (part.includes('push')) {
-      const why = pushDestroys(part, s)
+      const why = pushDestroys(raw, part, s)
       if (why) return why
     }
   }

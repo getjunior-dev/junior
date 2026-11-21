@@ -1,10 +1,11 @@
 /**
- * The hold (server/session/actions-hold.ts holdIfAction) fails closed, and
- * knows Junior's own servers by how they were registered, not by name
- * (core/actions/own.ts): a call it can't sort is held; a user's stdio server
- * called `browser` or `task` is held like any other; Junior's in-process
- * `browser` is free; an advance approval still lets a matching call go.
- * A fake runtime over a real SQLite store, no server.
+ * The hold (server/session/actions-hold.ts holdIfAction): a send goes out
+ * without asking; a call that destroys work, or one it can't judge, asks in a
+ * chat and is held in a job run. It knows Junior's own servers by how they
+ * were registered, not by name (core/actions/own.ts): a user's stdio server
+ * called `browser` or `task` is sorted like any other; Junior's in-process
+ * `browser` is plain local work. A fake runtime over a real SQLite store, no
+ * server.
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -15,7 +16,6 @@ import { createSdkMcpServer } from '@anthropic-ai/claude-agent-sdk'
 import { isOwnHandIn, isOwnTool, NO_OWN_SERVERS, OWN_SERVER_NAMES, ownServersOf } from '../core/actions/own.js'
 import { DEFAULT_RULES } from '../core/actions/rules.js'
 import { unsortedAction } from '../core/actions/sort.js'
-import { approvalFrom } from '../core/approvals/approvals.js'
 import type { StoredSession } from '../core/store/types.js'
 import type { WorkspaceRuntime } from '../server/workspace/runtime.js'
 
@@ -70,6 +70,9 @@ async function withHold(fn: (f: Fixture) => Promise<void>) {
 }
 
 const held = (d: { allow: boolean; reason?: string }) => !d.allow && /Queued for the user's approval/.test(d.reason ?? '')
+const asks = (d: { allow: boolean; ask?: boolean }) => !d.allow && d.ask === true
+const sent = (d: { allow: boolean; sure?: string }) => d.allow && /Sent without asking/.test(d.sure ?? '')
+const jobRow = (row: StoredSession) => ({ ...row, id: 'job-1', kind: 'job-run', jobId: 'j1' }) as StoredSession
 
 // ── identity, pure ──────────────────────────────────────────────────────────
 
@@ -109,35 +112,59 @@ test('a call the sort couldn’t judge counts as an unknown action', () => {
 
 // ── the hold ────────────────────────────────────────────────────────────────
 
-test('hold: a sort that throws on an MCP call holds it, never allows it', async () => {
+test('hold: a sort that throws asks in a chat and holds in a job run, never allows', async () => {
   await withHold(async ({ rt, row, sortThrows }) => {
     sortThrows.on = true
-    const d = await holdIfAction(rt, row, 'mcp__acme__frob_widget', { id: 7 }, { toolUseId: 'tu-1', own: ownServersOf(chatServers) })
+    const own = ownServersOf(chatServers)
+    assert.ok(asks(await holdIfAction(rt, row, 'mcp__acme__frob_widget', { id: 7 }, { toolUseId: 'tu-1', own })))
+    const job = jobRow(row)
+    const d = await holdIfAction(rt, job, 'mcp__acme__frob_widget', { id: 7 }, { toolUseId: 'tu-1', own })
     assert.ok(held(d), JSON.stringify(d))
     await rt.actionChain
-    const rec = await rt.store.actions.byCall(row.id, 'tu-1')
+    const rec = await rt.store.actions.byCall(job.id, 'tu-1')
     assert.equal(rec?.status, 'needs_you')
     assert.equal(rec?.why, 'unknown')
     assert.deepEqual(rec?.queue?.args, { id: 7 })
   })
 })
 
-test('hold: a chat’s shell command the sort can’t judge is held too', async () => {
+test('hold: a chat’s shell command the sort can’t judge asks', async () => {
   await withHold(async ({ rt, row, sortThrows }) => {
     sortThrows.on = true
     const d = await holdIfAction(rt, row, 'Bash', { command: 'curl -X POST https://example.com/hook' }, { toolUseId: 'tu-2', own: NO_OWN_SERVERS })
-    assert.ok(held(d), JSON.stringify(d))
+    assert.ok(asks(d), JSON.stringify(d))
   })
 })
 
-test('hold: a user’s stdio server named browser is held for a write tool', async () => {
+test('hold: a send goes out without asking, and nothing is queued', async () => {
+  await withHold(async ({ rt, row }) => {
+    const own = ownServersOf(chatServers)
+    assert.ok(sent(await holdIfAction(rt, row, SLACK, { channel_id: 'U04ANI', message: 'The PR is ready' }, { toolUseId: 'tu-7', own })))
+    assert.ok(sent(await holdIfAction(rt, row, 'Bash', { command: 'gh pr comment 12 --body "lgtm"' }, { toolUseId: 'tu-8', own })))
+    assert.ok(sent(await holdIfAction(rt, jobRow(row), SLACK, { channel_id: 'U04ANI', message: 'hi' }, { toolUseId: 'tu-9', own })))
+    await rt.actionChain
+    assert.equal((await rt.store.actions.list()).length, 0, 'the tracker records sends; the hold queues nothing')
+  })
+})
+
+test('hold: a user’s stdio server named browser or task is sorted like any other', async () => {
   await withHold(async ({ rt, row }) => {
     // The session registered only `junior` in-process; `browser` is the user's.
     const own = ownServersOf({ junior: inProcess('junior'), browser: { type: 'stdio', command: 'my-browser-mcp' } })
-    const d = await holdIfAction(rt, row, 'mcp__browser__browser_act', { action: 'click', uid: 3 }, { toolUseId: 'tu-3', own })
-    assert.ok(held(d), JSON.stringify(d))
-    const task = await holdIfAction(rt, row, 'mcp__task__create_task', { title: 'x' }, { toolUseId: 'tu-4', own })
-    assert.ok(held(task), JSON.stringify(task))
+    assert.ok(sent(await holdIfAction(rt, row, 'mcp__browser__browser_act', { action: 'click', uid: 3 }, { toolUseId: 'tu-3', own })))
+    assert.ok(asks(await holdIfAction(rt, row, 'mcp__task__delete_task', { id: 'x' }, { toolUseId: 'tu-4', own })))
+  })
+})
+
+test('hold: what destroys work asks in a chat, is held in a job run, and a job’s shell refuses it', async () => {
+  await withHold(async ({ rt, row }) => {
+    const own = ownServersOf(chatServers)
+    assert.ok(asks(await holdIfAction(rt, row, 'mcp__notion__delete_page', { id: 'p1' }, { toolUseId: 'tu-10', own })))
+    assert.ok(asks(await holdIfAction(rt, row, 'Bash', { command: 'gh pr close 12' }, { toolUseId: 'tu-11', own })))
+    const job = jobRow(row)
+    assert.ok(held(await holdIfAction(rt, job, 'mcp__notion__delete_page', { id: 'p1' }, { toolUseId: 'tu-12', own })))
+    const sh = await holdIfAction(rt, job, 'Bash', { command: 'rm -rf build' }, { toolUseId: 'tu-13', own })
+    assert.ok(!sh.allow && !held(sh) && !asks(sh), JSON.stringify(sh))
   })
 })
 
@@ -148,22 +175,6 @@ test('hold: Junior’s in-process browser and junior servers are free', async ()
     assert.deepEqual(await holdIfAction(rt, row, 'mcp__junior__create_work_item', { title: 'x' }, { toolUseId: 'tu-6', own }), { allow: true })
     await rt.actionChain
     assert.equal((await rt.store.actions.list()).length, 0, 'nothing recorded for a free call')
-  })
-})
-
-test('hold: an advance approval still covers a matching call', async () => {
-  await withHold(async ({ rt, row }) => {
-    const r = approvalFrom({ what: 'slack-dm', who: { id: 'U04ANI', name: 'Anirudha' }, why: 'PR-ready pings' }, { id: 'a1b2c3d4-0000', now: Date.now(), sessionId: null, proposalId: null })
-    assert.ok(r.ok)
-    await rt.store.approvals.put(r.approval)
-    const own = ownServersOf(chatServers)
-    const d = await holdIfAction(rt, row, SLACK, { channel_id: 'U04ANI', message: 'The PR is ready' }, { toolUseId: 'tu-7', own })
-    assert.equal(d.allow, true)
-    assert.match(d.allow ? (d.sure ?? '') : '', /Approved in advance by the user: DM Anirudha on Slack/)
-    assert.equal((await rt.store.approvals.get(r.approval.id))?.uses, 1)
-    // Anyone else is still held.
-    const other = await holdIfAction(rt, row, SLACK, { channel_id: 'U09DREW', message: 'hi' }, { toolUseId: 'tu-8', own })
-    assert.ok(held(other), JSON.stringify(other))
   })
 })
 

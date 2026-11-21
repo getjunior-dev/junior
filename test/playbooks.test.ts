@@ -37,14 +37,12 @@ test('the fix branch is Junior\'s own and stable per item', () => {
   assert.equal(fixBranch({ id: 'slack:C0ABC/p1729500000123456', title: 'Login 500s after deploy!' }), b)
 })
 
-test('a fix pushes its own branch and opens a draft PR; a ready PR or main is not its call', () => {
+test('a fix pushes its own branch and opens a PR; main is not its call', () => {
   const s = { headRef: 'fix/login-abc123', defaultBranch: 'main', draftPr: true }
   assert.equal(taskRunVerdict('git push -u origin HEAD:fix/login-abc123', s, sort).verdict, 'allow')
   assert.equal(taskRunVerdict('gh pr create --draft --base main --head fix/login-abc123 --title x --body y', s, sort).verdict, 'allow')
-  assert.equal(taskRunVerdict('gh pr create --base main --head fix/login-abc123 --title x --body y', s, sort).verdict, 'hold')
+  assert.equal(taskRunVerdict('gh pr create --base main --head fix/login-abc123 --title x --body y', s, sort).verdict, 'allow')
   assert.equal(taskRunVerdict('git push origin HEAD:main', s, sort).verdict, 'refuse')
-  // without draftPr (babysit), a draft PR is still held
-  assert.equal(taskRunVerdict('gh pr create --draft --title x --body y', { headRef: 'feat', defaultBranch: 'main' }, sort).verdict, 'hold')
 })
 
 test('a read-only step sends nothing, not even a draft', () => {

@@ -1,10 +1,9 @@
 import { statSync } from 'node:fs'
 import path from 'node:path'
 import { checkSend, type SendCheck } from '../../core/actions/check.js'
-import { type BranchScope, mayBeFree } from '../../core/actions/policy.js'
+import { type BranchScope, needsBranch } from '../../core/actions/policy.js'
 import { holdable, isArgsObject } from '../../core/actions/queue.js'
 import type { ActionRules } from '../../core/actions/rules.js'
-import type { AdvanceApproval } from '../../core/approvals/approvals.js'
 import { currentBranch } from '../git.js'
 import { defaultBranch } from '../worktrees.js'
 import { WorkspaceRuntime } from '../workspace/runtime.js'
@@ -14,9 +13,9 @@ import { toolHints } from './actions-record.js'
 
 // check_send (core/actions/check.ts): the send policy as a dry run, behind
 // POST /api/actions/check and the in-process junior tool of the same name.
-// It reads the actions file, the approvals list and, when asked about a push
+// It reads the actions file and, when asked about a push
 // from a folder, that folder's branch. It writes nothing: no record, no held
-// call, no approval use, no broadcast.
+// call, no broadcast.
 
 const UNKNOWN_SCOPE: BranchScope = { current: null, defaultBranch: null }
 /** What a built-in local tool is judged with when the file is unreadable: it never reads them. */
@@ -57,17 +56,10 @@ export async function checkSendOp(rt: WorkspaceRuntime, raw: unknown): Promise<S
   } catch (err) {
     // Fail closed, like the hold: an unreadable actions file holds every call it would sort.
     log('warn', 'actions', `check_send could not read the actions file: ${errText(err)}`, { workspace: rt.meta.id })
-    if (holdable(tool)) return { verdict: 'held', why: "Junior couldn't read its actions file, so it holds every shell command and connector call until that's fixed." }
+    if (holdable(tool)) return { verdict: 'destroys', why: "Junior couldn't read its actions file, so every shell command and connector call needs the user's OK until that's fixed." }
     rules = NO_RULES
   }
-  let approvals: AdvanceApproval[] = []
-  try {
-    approvals = await rt.store.approvals.list()
-  } catch (err) {
-    // No approvals read = none apply: the answer leans to held.
-    log('warn', 'actions', `check_send could not read approvals: ${errText(err)}`, { workspace: rt.meta.id })
-  }
   const command = tool === 'Bash' && typeof input.command === 'string' ? input.command : ''
-  const scope = cwd && command && mayBeFree(command) ? await scopeOf(cwd) : UNKNOWN_SCOPE
-  return checkSend(tool, input, { rules, hints: (t) => toolHints(rt, t), scope, approvals, now: Date.now() })
+  const scope = cwd && command && needsBranch(command) ? await scopeOf(cwd) : UNKNOWN_SCOPE
+  return checkSend(tool, input, { rules, hints: (t) => toolHints(rt, t), scope, now: Date.now() })
 }

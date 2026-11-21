@@ -3,18 +3,28 @@
  * free (Oct 24 2026), and the near misses that must stay free, against the one
  * policy (core/actions/policy.ts) and the default actions file. One row per
  * shape, both directions. A fixed hole stays fixed: add a row, never drop one.
+ *
+ * Sends go out on their own now, so what must not slip through is a force
+ * push to the default branch: each row is run as a force push (`push` →
+ * `push --force`). `hold` = it waits for the user (destroys or unknown),
+ * `allow` = it runs.
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { sortCall } from '../core/actions/sort.js'
 import { DEFAULT_RULES } from '../core/actions/rules.js'
-import { chatBashVerdict, type BranchScope } from '../core/actions/policy.js'
+import { shellVerdict, type BranchScope } from '../core/actions/policy.js'
 import { pushRefs, pushTarget, splitCommand } from '../core/actions/bash.js'
 
 const sort = (part: string) => sortCall('Bash', { command: part }, { rules: DEFAULT_RULES })
 const onMain: BranchScope = { current: 'main', defaultBranch: 'main' }
 const onFeat: BranchScope = { current: 'feat/x', defaultBranch: 'main' }
-const verdict = (cmd: string, s: BranchScope) => chatBashVerdict(cmd, s, sort).verdict
+/** The row as a force push: the first standalone `push` word gains `--force`. */
+const forced = (cmd: string) => cmd.replace(/(^|[\s"'])push(?=[\s"']|$)/, '$1push --force')
+const verdict = (cmd: string, s: BranchScope) => {
+  const v = shellVerdict(forced(cmd), s, sort).verdict
+  return v === 'destroys' || v === 'unknown' ? 'hold' : 'allow'
+}
 
 type Row = [command: string, scope: BranchScope, expected: 'hold' | 'allow', why: string]
 
@@ -55,7 +65,7 @@ const ROWS: Row[] = [
   ['env -C ../other git push', onFeat, 'hold', 'env -C moves git to another folder'],
   ['git -C ../other push origin "$(git branch --show-current)"', onFeat, 'hold', 'the current branch of another folder'],
   ['cd ../other && git push origin @', onFeat, 'hold', 'after a cd, @ is another folder’s branch'],
-  ['eval "git push origin feat/x && gh pr comment 1 --body hi"', onFeat, 'hold', 'one held part inside eval holds it'],
+  ['eval "git push origin feat/x && gh pr comment 1 --body hi"', onFeat, 'allow', 'a forced push to your branch and a comment both go out'],
   // The review's probe: the command itself, not just its target, only the shell knows.
   ['eval "$CMD"', onFeat, 'hold', 'eval of a variable runs anything'],
   ['eval $CMD', onFeat, 'hold', 'unquoted, too'],
@@ -82,7 +92,7 @@ const ROWS: Row[] = [
   ['git push origin feat:refs/remotes/origin/main', onFeat, 'hold', 'a ref that isn’t a branch is unknown'],
   ['git push origin refs/tags/v1', onFeat, 'hold', 'a tag is not your branch'],
   ['npx -c "git push origin main"', onFeat, 'hold', 'npx -c runs its string as a script'],
-  ['npx --call="gh pr comment 1 --body hi"', onFeat, 'hold', 'the --call= form of it'],
+  ['npx --call="gh pr comment 1 --body hi"', onFeat, 'allow', 'a comment goes out on its own'],
   // The second review's probe: wrappers and openers the first pass missed.
   ['eval -- "git push origin main"', onFeat, 'hold', 'eval skips a leading --'],
   ['builtin eval "git push origin main"', onFeat, 'hold', 'builtin is a wrapper'],
@@ -97,7 +107,7 @@ const ROWS: Row[] = [
   ['nice -n 10 git push origin main', onFeat, 'hold', 'nice with a flag value'],
   ['stdbuf -oL git push origin main', onFeat, 'hold', 'stdbuf is a wrapper'],
   ['find . -exec git push origin main \;', onFeat, 'hold', 'find -exec runs its command'],
-  ['find . -name x -execdir gh pr comment 1 --body hi {} +', onFeat, 'hold', 'find -execdir … + too'],
+  ['find . -name x -execdir gh pr comment 1 --body hi {} +', onFeat, 'allow', 'a comment goes out on its own'],
   ['git -c remote.origin.push=HEAD:main push origin', onFeat, 'hold', 'config can remap the refspec'],
   ['git -c push.default=upstream push', onFeat, 'hold', 'config can pick the upstream'],
   // Near misses that stay free on your own branch.
@@ -127,7 +137,7 @@ const ROWS: Row[] = [
   // Local commands that only look like the shapes above stay out of the way.
   ['$HOME/bin/lint src', onMain, 'allow', 'a path through a variable to a named program'],
   ['git ls-files -m | xargs git add', onMain, 'allow', 'xargs into a local git verb'],
-  ["git ls-files | xargs -I{} git checkout -- {}", onMain, 'allow', 'a placeholder in a local git verb’s arguments'],
+  ["git ls-files | xargs -I{} git checkout -- {}", onMain, 'hold', 'checking out over files throws away uncommitted work'],
   ["find . -name '*.ts' | xargs sh -c 'wc -l \"$@\"' _", onMain, 'allow', 'a fixed script behind xargs'],
   ['ls | xargs', onMain, 'allow', 'a bare xargs runs echo'],
   ['git -C "$DIR" status', onMain, 'allow', 'a variable flag value is not the verb'],
@@ -135,7 +145,7 @@ const ROWS: Row[] = [
 ]
 
 for (const [cmd, scope, expected, why] of ROWS) {
-  test(`bypass corpus: ${expected} on ${scope.current}: ${cmd}`, () => {
+  test(`bypass corpus: ${expected} on ${scope.current}: ${forced(cmd)}`, () => {
     assert.equal(verdict(cmd, scope), expected, why)
   })
 }

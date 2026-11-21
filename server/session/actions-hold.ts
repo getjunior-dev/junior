@@ -4,35 +4,34 @@ import { type RoleFence, roleFenceDecision } from '../../core/teams/fence.js'
 import type { ToolVeto, VetoDecision } from '../providers/types.js'
 import { log } from '../log.js'
 import { type ActionMove, canonJson, heldEntry, heldRecord, holdable, isArgsObject, move, queuedMessage, sendDelay } from '../../core/actions/queue.js'
-import { destructiveCommand } from '../../core/actions/commands.js'
-import { type BranchScope, chatBashVerdict, mayBeFree, selfApproval, sendOnlyShell } from '../../core/actions/policy.js'
+import { type BranchScope, needsBranch, selfApproval, sendOnlyShell, shellVerdict } from '../../core/actions/policy.js'
 import { shellSendOnly } from '../../core/junior/agents.js'
 import { chatAgentNamed } from '../chat-agents.js'
 import { currentBranch } from '../git.js'
 import { defaultBranch } from '../worktrees.js'
 import { taskRunVerdict } from '../../core/babysit/policy.js'
 import { joinHeldCall, recordFor } from '../../core/actions/track.js'
-import { type SortedAction, unsortedAction } from '../../core/actions/sort.js'
+import { destructiveTool, type SortedAction, unsortedAction } from '../../core/actions/sort.js'
 import { shortActionId } from '../../core/actions/view.js'
 import type { ActionRecord } from '../../core/actions/types.js'
 import type { ActionVerb } from '../../shared/protocol.js'
 import { browserGateFor, WorkspaceRuntime } from '../workspace/runtime.js'
 import { teamRunOf, workerSpec } from '../team-run/state.js'
-import { actionContext, actionsChanged, sortForWorkspace } from './actions-record.js'
+import { actionContext, actionsChanged, sortForWorkspace, toolHints } from './actions-record.js'
 import { errText } from '../errors.js'
-import { coveringApproval, useApproval } from '../approvals-ops.js'
-import { describeApproval } from '../../core/approvals/approvals.js'
 import { invalidateInbox } from '../ws/send.js'
 import { deliverSendBack, dispatchAction } from './actions-send.js'
 import { protectedEdit, protectedReason } from '../../core/work/contract-apply.js'
 import { readRepoContract } from '../repo-contract.js'
 
-// Queued actions (core/actions/queue.ts). One policy (core/actions/policy.ts):
-// in a chat, a job run, a team's sessions or a task run, a call that sorts as
-// an action is held, not run: the agent is told "queued as #a1b2c3", and the
-// call waits on a card for approve / edit / send back / reject. An approved
-// one goes out through a headless one-tool run fenced to the approved args:
-// the daemon never calls an MCP server itself.
+// One policy (core/actions/policy.ts): in a chat, a job run, a team's sessions
+// or a task run, a send goes out on its own and is recorded (a Sent card, a
+// line in Junior's log). Only a call that destroys work waits for the user:
+// in a chat it asks (the permission card); in a run nobody watches it is held
+// (core/actions/queue.ts): the agent is told "queued as #a1b2c3", and the call
+// waits on a card for approve / edit / send back / reject. An approved one
+// goes out through a headless one-tool run fenced to the approved args: the
+// daemon never calls an MCP server itself.
 
 /** The model that sends approved actions: cheap, and it only copies JSON into one call. */
 export const DISPATCH_MODEL = 'haiku'
@@ -44,14 +43,14 @@ export const isTeamWorker = (rt: WorkspaceRuntime, sessionId: string): boolean =
   return !!run && run.leadSessionId !== sessionId
 }
 
-/** Every Claude chat, a team's lead and workers included: local work runs, sends are held. */
+/** Every Claude chat, a team's lead and workers included: someone can answer a permission card there. */
 const chatHoldsSends = (row: StoredSession): boolean => row.provider === 'claude' && row.kind === 'chat'
 
-/** Does this session hold its outbound calls for approval? Chats (team leads and workers included), job runs and task runs do. */
+/** Does the policy judge this session's calls? Chats (team leads and workers included), job runs and task runs. */
 const holdsActions = (rt: WorkspaceRuntime, row: StoredSession): boolean =>
   row.provider === 'claude' && (row.kind === 'job-run' || rt.taskRuns.has(row.id) || chatHoldsSends(row))
 
-/** The branch a chat's shell is on and the repo's default one: what a free push is judged against. */
+/** The branch a session's shell is on and the repo's default one: what a force push is judged against. */
 async function branchScope(cwd: string): Promise<BranchScope> {
   const [current, def] = await Promise.all([currentBranch(cwd), defaultBranch(cwd).catch(() => null)])
   return { current, defaultBranch: def }
@@ -97,12 +96,7 @@ export function sessionVeto(rt: WorkspaceRuntime, row: StoredSession, own: Reado
       }
       if (toolName === 'Bash' && isArgsObject(input) && selfApproval(String(input.command ?? ''))) {
         log('info', 'actions', 'refused a command that approves through junior’s API', { session: row.id, workspace: rt.meta.id })
-        return { allow: false, reason: 'Only the user approves sends and adds advance approvals, in the app. Propose one with propose_approval instead.' }
-      }
-      // Claude's auto mode runs local work; a command that destroys work still comes to you.
-      if (toolName === 'Bash' && chatHoldsSends(row) && isArgsObject(input)) {
-        const why = destructiveCommand(String(input.command ?? ''))
-        if (why) return { allow: false, ask: true, reason: `This command ${why}, so it needs your OK.` }
+        return { allow: false, reason: 'Only the user approves held calls, in the app.' }
       }
       // An agent whose tools leave Bash out keeps a shell for the sends the user asks for, nothing else.
       if (toolName === 'Bash' && chat && row.agent && isArgsObject(input) && shellSendOnly(await chatAgentNamed(rt, row.agent))) {
@@ -122,11 +116,10 @@ export function sessionVeto(rt: WorkspaceRuntime, row: StoredSession, own: Reado
 }
 
 /**
- * The veto a holding session gets: an MCP call or a Bash command that sorts
- * as an action is refused with "queued as #…" and filed for approval, unless
- * the policy makes it free (a push to your own branch, a draft PR);
- * everything else passes. A held command is sent from the session's folder.
- * It fails closed: a call it can't sort is held, not let through.
+ * The veto a judged session gets. A send runs (the record says it went out
+ * without asking); a call that destroys work, or one only the shell knows,
+ * asks in a chat and is held in a run nobody watches ("queued as #…"). A held
+ * command is sent from the session's folder. Everything else passes.
  */
 export async function holdIfAction(rt: WorkspaceRuntime, row: StoredSession, toolName: string, input: unknown, ctx: HoldContext): Promise<VetoDecision> {
   if (!holdsActions(rt, row)) return { allow: true }
@@ -134,59 +127,71 @@ export async function holdIfAction(rt: WorkspaceRuntime, row: StoredSession, too
   if (guarded) return guarded
   if (!holdable(toolName)) return { allow: true }
   const args = isArgsObject(input) ? input : {}
-  // A babysit task's shell (core/babysit/policy.ts): pushes to its PR's branch and
-  // its bot thread's reply and resolve run; force and other branches are refused;
-  // any other send falls through and is held like a chat's.
+  const watched = chatHoldsSends(row) && !rt.taskRuns.has(row.id)
+  const sort = sortForWorkspace(rt, ctx.own)
+  // A babysit task's shell (core/babysit/policy.ts): pushes only to its PR's branch, and none from a read-only task.
   const taskRun = rt.taskRuns.get(row.id)
   if (taskRun && toolName === 'Bash') {
-    const sort = sortForWorkspace(rt, ctx.own)
     let v
     try {
       v = taskRunVerdict(String(args.command ?? ''), taskRun.scope, (part) => sort('Bash', { command: part }))
     } catch {
-      v = { verdict: 'hold' as const }
+      v = { verdict: 'allow' as const }
     }
     if (v.verdict === 'refuse') {
       log('info', 'tasks', `refused in a task session: ${v.reason}`, { session: row.id, workspace: rt.meta.id })
       return { allow: false, reason: v.reason }
     }
-    if (v.verdict === 'allow') return { allow: true }
   }
-  // A chat's shell: a push to your own branch and a draft PR run; any other send is held,
-  // and sent from the chat's folder. (A job's Bash isn't held in this phase: sending needs its folder.)
-  if (toolName === 'Bash' && !taskRun) {
-    if (!chatHoldsSends(row)) return { allow: true }
+  // Why this call waits for the user, or null when it may run.
+  let waits: { why: string; sorted: SortedAction } | null = null
+  if (toolName === 'Bash') {
     const command = String(args.command ?? '')
-    const sort = sortForWorkspace(rt, ctx.own)
+    let v: ReturnType<typeof shellVerdict>
     try {
-      const scope = mayBeFree(command) ? await branchScope(row.cwd) : { current: null, defaultBranch: null }
-      const v = chatBashVerdict(command, scope, (part) => sort('Bash', { command: part }))
-      if (v.verdict === 'allow') return v.free ? { allow: true, sure: `Free under the user's policy: ${v.free === 'draft PR' ? 'a draft PR' : 'a push to your own branch'}.` } : { allow: true }
+      const scope = needsBranch(command) ? await branchScope(row.cwd) : { current: null, defaultBranch: null }
+      v = shellVerdict(command, scope, (part) => sort('Bash', { command: part }))
     } catch (err) {
-      log('warn', 'actions', `could not judge a command against the policy, holding it: ${errText(err)}`, { session: row.id, workspace: rt.meta.id })
+      log('warn', 'actions', `could not judge a command against the policy, asking: ${errText(err)}`, { session: row.id, workspace: rt.meta.id })
+      v = { verdict: 'unknown' }
     }
+    if (v.verdict === 'local') return { allow: true }
+    if (v.verdict === 'send') return sentWithoutAsking(taskRun)
+    const why = v.verdict === 'destroys' ? `This command ${v.why}` : 'Only the shell knows what this command runs'
+    if (watched) return { allow: false, ask: true, reason: `${why}, so it needs your OK.` }
+    // A job's shell is fenced to reads, and a held command needs the folder it ran in: refuse it.
+    if (row.kind === 'job-run') return { allow: false, reason: `${why}. A job run can't wait for the user's OK: report it instead.` }
+    waits = { why, sorted: unsortedAction(toolName, args) }
+  } else {
+    if (!toolName.startsWith('mcp__')) return { allow: true }
+    let sorted: SortedAction | null
+    try {
+      sorted = sort(toolName, args)
+    } catch (err) {
+      // Fail closed: a call we can't judge waits for the user, like a destructive one.
+      log('warn', 'actions', `could not sort a call, it waits: ${errText(err)}`, { session: row.id, tool: toolName, workspace: rt.meta.id })
+      sorted = unsortedAction(toolName, args)
+      waits = { why: 'Junior could not tell what this call does', sorted }
+    }
+    if (!sorted) return { allow: true }
+    // A read-only task (a first pass, an answer's draft, a plan) sends nothing: it hands in.
+    if (taskRun?.scope.readOnly) {
+      log('info', 'tasks', `refused a send in a read-only task: ${sorted.summary}`, { session: row.id, workspace: rt.meta.id })
+      return { allow: false, reason: 'This task is read-only: nothing is sent from here. Hand in with your submit tool.' }
+    }
+    const destroys = destructiveTool(toolName, toolHints(rt, toolName), ctx.own)
+    if (destroys) waits = { why: `This call ${destroys}`, sorted }
+    if (!waits) return sentWithoutAsking(taskRun)
+    if (watched) return { allow: false, ask: true, reason: `${waits.why}, so it needs your OK.` }
   }
-  if (!toolName.startsWith('mcp__') && toolName !== 'Bash') return { allow: true }
-  let sorted: SortedAction | null
-  try {
-    sorted = sortForWorkspace(rt, ctx.own)(toolName, args)
-  } catch (err) {
-    // Fail closed: a call we can't judge waits for the user, like an unknown tool.
-    log('warn', 'actions', `could not sort a call, holding it: ${errText(err)}`, { session: row.id, tool: toolName, workspace: rt.meta.id })
-    sorted = unsortedAction(toolName, args)
-  }
-  if (!sorted) return { allow: true }
-  // A read-only task (a first pass, an answer's draft, a plan) sends nothing: the user does.
-  if (taskRun?.scope.readOnly) {
-    log('info', 'tasks', `refused a send in a read-only task: ${sorted.summary}`, { session: row.id, workspace: rt.meta.id })
-    return { allow: false, reason: 'This task is read-only: nothing is sent from here. Hand in with your submit tool; sending is the user’s call.' }
-  }
-  // Approved in advance (core/approvals): it goes out now, and its record says which approval let it.
-  const rule = await coveringApproval(rt, toolName, args)
-  if (rule) {
-    await useApproval(rt, rule, row.id, ctx.toolUseId)
-    return { allow: true, sure: `Approved in advance by the user: ${describeApproval(rule)}.` }
-  }
+  return holdForUser(rt, row, toolName, args, waits.sorted, ctx)
+}
+
+/** A send the policy lets out on its own: the record says so (core/actions/track.ts allowedBy). */
+const sentWithoutAsking = (taskRun: unknown): VetoDecision => ({ allow: true, sure: taskRun ? 'Sent without asking, from the task.' : 'Sent without asking: every send goes out and is logged.' })
+
+/** File a destructive call from a run nobody watches as a held card, and tell the agent it is queued. */
+function holdForUser(rt: WorkspaceRuntime, row: StoredSession, toolName: string, args: Record<string, unknown>, sorted: SortedAction, ctx: HoldContext): VetoDecision {
   // The same call with the same args, still waiting: name the action already filed.
   const key = `${row.id}\u0000${toolName}\u0000${canonJson(args)}`
   const dup = rt.heldCalls.get(key)

@@ -631,10 +631,9 @@ export class LiveSession {
         return Promise.resolve({ behavior: 'allow', updatedInput: toolInput })
       }
     }
-    // The level on the team card. Outbound calls have already met the veto (held, or
-    // free under the one policy), so what reaches here stays on this machine: except a
-    // connector write nothing recognised as an action, which still asks. `everything`
-    // is read as `local`: a send always waits for you.
+    // The level on the team card. Outbound calls have already met the veto (sent without
+    // asking, or asked about when they destroy work), so what reaches here stays on this
+    // machine: except a connector write nothing recognised as an action, which still asks.
     if (run && run.leadSessionId !== this.row.id) {
       const level = run.card.permissions ?? 'local'
       if (level !== 'ask' && (toolName === 'Bash' || effect !== 'external-write')) {
@@ -680,7 +679,7 @@ export class LiveSession {
       )
     }
     // The session's mode. Reads and lookups never ask. A chat runs at 'auto' (one
-    // policy, core/actions/policy.ts: the veto has held its sends already); a
+    // policy, core/actions/policy.ts: the veto has judged its sends already); a
     // Codex chat at 'gated', where this is the one gate it can't skip. A team
     // worker at 'acceptEdits' adds read-only shell; the SDK lets edits through.
     if (effect === 'read') return Promise.resolve({ behavior: 'allow', updatedInput: toolInput })
