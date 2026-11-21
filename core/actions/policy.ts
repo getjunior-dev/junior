@@ -44,7 +44,7 @@ export type FreeWhy = 'your branch' | 'draft PR'
 const FORCE_RE = /^-[a-zA-Z]*f[a-zA-Z]*$/
 const WIDE_PUSH = ['--delete', '-d', '--mirror', '--all', '--tags', '--prune']
 
-function isDefault(branch: string, s: BranchScope): boolean {
+export function isDefault(branch: string, s: BranchScope): boolean {
   return s.defaultBranch ? branch === s.defaultBranch : branch === 'main' || branch === 'master'
 }
 

@@ -35,11 +35,28 @@ export const WRITE_VERBS = new Set([
   'publish', 'reply', 'draft', 'star', 'pin', 'react', 'approve', 'complete', 'cancel',
 ])
 
+/** Verbs that destroy what a connector call touches: such a call still waits for the user. */
+export const DESTROY_VERBS = new Set(['delete', 'remove', 'close', 'archive', 'destroy', 'drop', 'purge', 'revoke', 'cancel', 'uninstall'])
+
 /** Lowercased word tokens of a tool's leaf name (splits camelCase and snake_case). */
 export const wordsOf = (leaf: string): string[] => (leaf.match(/[A-Za-z][a-z]*/g) ?? []).map((w) => w.toLowerCase())
 
 /** `mcp__<server>__<leaf>` → the leaf. */
 export const leafOf = (toolName: string): string => toolName.slice(toolName.lastIndexOf('__') + 2)
+
+/**
+ * Why a connector call destroys something, or null: its server marks it
+ * destructive, or its name has a destroying verb (delete, close, archive…).
+ * Junior's own servers never do.
+ */
+export function destructiveTool(toolName: string, hints?: ToolHints, own: ReadonlySet<string> = NO_OWN_SERVERS): string | null {
+  if (!toolName.startsWith('mcp__') || own.has(serverOf(toolName))) return null
+  if (hints?.readOnly === true) return null
+  const verb = wordsOf(leafOf(toolName)).find((w) => DESTROY_VERBS.has(w))
+  if (verb) return `${verb}s something in ${serverOf(toolName)}`
+  if (hints?.destructive === true) return `${serverOf(toolName)} marks it destructive`
+  return null
+}
 
 
 

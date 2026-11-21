@@ -55,6 +55,24 @@ test('destructive commands are caught, chained or not', () => {
     'git checkout -- .',
     'git restore .',
     'git branch -D feat/x',
+    'git branch -d merged',
+    'git branch --delete old',
+    'git tag -d v1',
+    'git push origin --delete feat/x',
+    'git push origin :feat/x',
+    'git push --mirror backup',
+    'git push --force origin main',
+    'git push -f origin HEAD:master',
+    'gh pr close 12',
+    'gh -R o/r issue close 3',
+    'gh issue delete 4',
+    'gh repo delete o/r --yes',
+    'gh release delete v1',
+    'gh api -X DELETE repos/o/r/git/refs/heads/x',
+    'gh api --method=delete repos/o/r',
+    'find . -name "*.log" -delete',
+    'rmdir build',
+    'git rm -r old',
     'git stash drop',
     'git stash clear',
     'dropdb junior',
@@ -71,11 +89,23 @@ test('ordinary work is not destructive', () => {
     'npm test',
     'git reset HEAD file.ts',
     'git checkout main',
-    'git branch -d merged',
     'git stash',
     'git stash pop',
     'git clean -n',
     'echo "drop it"',
     'git push origin main',
+    'git push --force origin feat/x',
+    'git push --force-with-lease origin HEAD:feat/x',
+    'gh pr merge 12 --squash --delete-branch',
+    'gh pr comment 12 --body "looks good"',
+    'gh pr create --title x --body y',
+    'git rm old.ts',
   ]) assert.equal(destructiveCommand(cmd), null, cmd)
+})
+
+test('a force push to the checked-out branch is judged against where the shell stands', () => {
+  assert.equal(destructiveCommand('git push --force', { current: 'feat/x', defaultBranch: 'main' }), null)
+  assert.ok(destructiveCommand('git push --force', { current: 'main', defaultBranch: 'main' }))
+  assert.ok(destructiveCommand('git push -f', { current: null, defaultBranch: null }))
+  assert.ok(destructiveCommand('cd ../other && git push -f', { current: 'feat/x', defaultBranch: 'main' }))
 })

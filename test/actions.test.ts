@@ -574,3 +574,13 @@ test('fix 12b: the tracker forgets a prompt once its call settles', () => {
   }
   assert.equal(promptOf.size, 0)
 })
+
+test('a connector call that deletes, closes or cancels destroys; a send does not', async () => {
+  const { destructiveTool } = await import('../core/actions/sort.js')
+  for (const t of ['mcp__notion__delete_page', 'mcp__linear__closeIssue', 'mcp__cal__cancel_events', 'mcp__x__archive_thread']) assert.ok(destructiveTool(t), t)
+  assert.ok(destructiveTool('mcp__x__set_thing', { destructive: true }))
+  for (const t of ['mcp__slack__slack_send_message', 'mcp__github__add_comment', 'mcp__linear__save_issue']) assert.equal(destructiveTool(t), null, t)
+  assert.equal(destructiveTool('mcp__x__delete_page', { readOnly: true }), null)
+  assert.equal(destructiveTool('mcp__junior__delete_thing', undefined, new Set(['junior'])), null)
+  assert.equal(destructiveTool('Bash'), null)
+})
