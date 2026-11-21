@@ -13,12 +13,9 @@
  * Junior's log (Sent, with who allowed it). Your approved verdicts feed the
  * tally in config (BOT_TALLY_KEY).
  */
-import type { AdvanceApproval } from '../../core/approvals/approvals.js'
-import { allowedDetailFor, BOT_REPLY_TOOL, describeApproval } from '../../core/approvals/approvals.js'
 import { recordFor } from '../../core/actions/track.js'
-import type { ActionRecord } from '../../core/actions/types.js'
+import { type ActionRecord, SENT_WITHOUT_ASKING } from '../../core/actions/types.js'
 import {
-  BOT_REPLY_STEP,
   BOT_TALLY_KEY,
   botRepliesOf,
   replyArgs,
@@ -39,7 +36,6 @@ import {
 } from '../../core/babysit/bot-replies.js'
 import { counts } from '../../core/babysit/bot-triage.js'
 import type { ItemTask } from '../../core/work/tasks.js'
-import { coveringApproval, useApproval } from '../approvals-ops.js'
 import { gh } from '../babysit/glue.js'
 import { errText } from '../errors.js'
 import { log } from '../log.js'
@@ -58,35 +54,30 @@ export async function sendBotRepliesOp(rt: WorkspaceRuntime, taskId: string, raw
   if (t.step !== SEND_BOT_REPLIES_STEP || t.state !== 'waiting') throw new Error('only waiting bot replies can be sent')
   // Planned before the claim: an empty reply you wrote never leaves the card.
   const plan = replyPlan(botRepliesOf(t.input), t.output?.handled ?? [], { by: 'you' }, replyEditsFrom(raw))
-  return carryOut(rt, t, plan, run, new Map())
+  return carryOut(rt, t, plan, run)
 }
 
 /**
- * The replies task was just added: the replies an advance approval covers go
- * alone. True = nothing on it waits for you any more; false = you still have
- * replies to send (or none was covered, or it failed), so it pings you.
+ * The replies task was just added: Junior's replies go out on their own, as
+ * drafted, like every send (core/actions/policy.ts). True = nothing on it
+ * waits for you any more; false = a send failed, so it pings you.
  */
-export async function botRepliesUnderApproval(rt: WorkspaceRuntime, t: ItemTask, run: GhRun = gh): Promise<boolean> {
+export async function botRepliesOnTheirOwn(rt: WorkspaceRuntime, t: ItemTask, run: GhRun = gh): Promise<boolean> {
   if (t.step !== SEND_BOT_REPLIES_STEP || t.state !== 'waiting' || !prOfItem(t.itemId)) return false
   const replies = botRepliesOf(t.input)
-  const rules = new Map<string, AdvanceApproval>()
-  for (const r of replies) {
-    const a = await coveringApproval(rt, BOT_REPLY_TOOL, { bot: r.author }, { playbook: BOT_REPLY_STEP })
-    if (a) rules.set(r.threadId, a)
-  }
-  if (!rules.size) return false
-  const plan = replyPlan(replies, t.output?.handled ?? [], { by: 'rule', covers: (r) => rules.get(r.threadId)?.id ?? null })
+  if (!replies.length) return false
+  const plan = replyPlan(replies, t.output?.handled ?? [], { by: 'rule', covers: () => 'policy' })
   try {
-    const after = await carryOut(rt, t, plan, run, rules)
+    const after = await carryOut(rt, t, plan, run)
     return after.state === 'done'
   } catch (err) {
-    log('warn', 'tasks', `approved bot replies failed, they wait for you: ${errText(err)}`, { task: t.id, workspace: rt.meta.id })
+    log('warn', 'tasks', `bot replies failed, they wait for you: ${errText(err)}`, { task: t.id, workspace: rt.meta.id })
     return false
   }
 }
 
 /** The plan, carried out: claimed, each reply sent and recorded, fixes added, the tally fed, the task moved on. */
-async function carryOut(rt: WorkspaceRuntime, t: ItemTask, plan: ReplyPlan, run: GhRun, rules: ReadonlyMap<string, AdvanceApproval>): Promise<ItemTask> {
+async function carryOut(rt: WorkspaceRuntime, t: ItemTask, plan: ReplyPlan, run: GhRun): Promise<ItemTask> {
   const pr = prOfItem(t.itemId)
   if (!pr) throw new Error('this task is not on a GitHub PR')
   if (!plan.sends.length && !plan.fixes.length) throw new Error('nothing left to send')
@@ -97,7 +88,7 @@ async function carryOut(rt: WorkspaceRuntime, t: ItemTask, plan: ReplyPlan, run:
   const errors: string[] = []
   for (const s of plan.sends) {
     const at = Date.now()
-    const rule = s.allowedBy === 'rule' ? (rules.get(s.reply.threadId) ?? null) : null
+    const auto = s.allowedBy === 'rule'
     let url: string | null = null
     let error: string | null = null
     try {
@@ -110,9 +101,8 @@ async function carryOut(rt: WorkspaceRuntime, t: ItemTask, plan: ReplyPlan, run:
       sent.push(s)
       // The reply is out: a resolve that fails leaves the thread open, it never sends twice.
       await run(resolveArgs(s.reply.threadId)).catch((err) => log('warn', 'tasks', `replied, but could not resolve the thread: ${errText(err)}`, { task: t.id, workspace: rt.meta.id }))
-      if (rule) await useApproval(rt, rule, `task-${t.id}`, undefined)
     } else errors.push(error)
-    await recordReply(rt, t, pr, s, rule, at, url, error)
+    await recordReply(rt, t, pr, s, auto, at, url, error)
   }
   const now = Date.now()
   for (const r of plan.fixes) {
@@ -132,10 +122,9 @@ async function carryOut(rt: WorkspaceRuntime, t: ItemTask, plan: ReplyPlan, run:
   } else after = await rt.store.tasks.move(t.id, 'waiting', { output, ...(errors.length ? { error: errors[0] } : {}) }, Date.now())
 
   const byRule = plan.sends.some((s) => s.allowedBy === 'rule')
-  const firstRule = byRule ? [...rules.values()][0] : null
   if (sent.length || plan.fixes.length)
-    await rt.store.items.addDecision(t.itemId, { at: Date.now(), by: byRule ? 'junior' : 'you', text: firstRule ? `${summary} (approved in advance: ${describeApproval(firstRule)})` : summary, taskId: t.id })
-  log('info', 'tasks', `bot replies on ${pr.repo}#${pr.number}: ${summary}${byRule ? ' (approved in advance)' : ''}`, { task: t.id, workspace: rt.meta.id })
+    await rt.store.items.addDecision(t.itemId, { at: Date.now(), by: byRule ? 'junior' : 'you', text: byRule ? `${summary} (sent without asking)` : summary, taskId: t.id })
+  log('info', 'tasks', `bot replies on ${pr.repo}#${pr.number}: ${summary}${byRule ? ' (sent without asking)' : ''}`, { task: t.id, workspace: rt.meta.id })
   tasksChanged(rt)
   if (plan.fixes.length) void pumpTasks(rt)
   // Nothing went out and nothing changed: say why on the card.
@@ -161,7 +150,7 @@ async function recordReply(
   t: ItemTask,
   pr: { repo: string; number: number },
   s: PlannedSend,
-  rule: AdvanceApproval | null,
+  auto: boolean,
   at: number,
   url: string | null,
   error: string | null,
@@ -179,8 +168,8 @@ async function recordReply(
     status: error ? 'failed' : 'succeeded',
     link: url ?? s.reply.url ?? `https://github.com/${pr.repo}/pull/${pr.number}`,
     error,
-    allowedBy: rule ? 'rule' : 'prompt',
-    allowedDetail: rule ? allowedDetailFor(rule) : 'on the item page',
+    allowedBy: auto ? 'policy' : 'prompt',
+    allowedDetail: auto ? SENT_WITHOUT_ASKING : 'on the item page',
     settledAt: now,
     updatedAt: now,
   }

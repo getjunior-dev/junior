@@ -11,7 +11,6 @@ import assert from 'node:assert/strict'
 import { mkdtempSync, rmSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { approvalFrom, type AdvanceApproval } from '../core/approvals/approvals.js'
 import type { ApprovedSend } from '../core/playbooks/send.js'
 import { NUDGE_STEP, NUDGES_SENT_KEY, nudgeMarks, nudgeRoute, nudgeSentWith, nudgesSentFrom, nudgeTask, pickWait, requestedSince, waitingOf } from '../core/work/nudge-suggest.js'
 import type { ScoredItem } from '../core/work/types.js'
@@ -166,12 +165,6 @@ const fakeSend = (calls: ApprovedSend[], ok = true) => async (_rt: WorkspaceRunt
 const items = (...xs: ScoredItem[]) => async () => xs
 const allTasks = async (rt: WorkspaceRuntime) => [...(await rt.store.tasks.list(PR.id)), ...(await rt.store.tasks.list(SLACK.id))]
 
-function channelApproval(channel: string): AdvanceApproval {
-  const r = approvalFrom({ what: 'slack-post', who: { id: channel, name: '#eng' }, why: 'nudges' }, { id: 'cd34ef56-nudge', now: 1, sessionId: null, proposalId: null })
-  assert.ok(r.ok, r.ok ? '' : r.error)
-  return r.approval
-}
-
 test('the Junior page’s marks create nothing: no task, no draft', () =>
   withRuntime(async (rt) => {
     const marks = await nudgeMarksOp(rt, [PR, SLACK], { now: NOW, me: 'samar' })
@@ -248,46 +241,46 @@ test('Draft nudge on a GitHub PR: one task on you, nothing sent; again returns t
     assert.deepEqual(await nudgeMarksOp(rt, [PR], { now: Date.now() }), {})
   }))
 
-test('Draft nudge on a Slack follow-up waits for you; your Send posts your edit in the thread, logs it, and starts the cooldown', () =>
+test('Draft nudge on a Slack follow-up goes out on its own, as drafted, logged as sent without asking, and starts the cooldown', () =>
   withRuntime(async (rt) => {
     const calls: ApprovedSend[] = []
     const t = await draftNudgeOp(rt, { itemId: SLACK.id }, { items: items(SLACK), send: fakeSend(calls) })
-    assert.equal(t.state, 'waiting')
+    assert.equal(t.state, 'done')
     assert.equal(t.input?.route, 'slack-thread')
-    assert.equal(calls.length, 0)
-
-    const done = await sendNudgeOp(rt, t.id, { text: 'Hi @priya, is the 4.2 checklist final? It blocks the release.' }, fakeSend(calls))
-    assert.equal(done.state, 'done')
-    assert.deepEqual(calls, [{ channel: 'C0123ABCD', threadTs: '1729500000.000100', message: 'Hi @priya, is the 4.2 checklist final? It blocks the release.' }])
+    assert.equal(calls.length, 1)
+    assert.equal(calls[0]!.channel, 'C0123ABCD')
     await rt.actionChain
     const recs = (await rt.store.actions.list()).filter((r) => r.sessionId === `task-${t.id}`)
     assert.equal(recs.length, 1)
-    assert.equal(recs[0]!.allowedBy, 'prompt')
+    assert.equal(recs[0]!.allowedBy, 'policy')
+    assert.equal(recs[0]!.allowedDetail, 'sent without asking')
     assert.equal(recs[0]!.status, 'succeeded')
     assert.deepEqual(nudgesSentFrom(await rt.store.config.get(NUDGES_SENT_KEY)).map((s) => s.person), ['priya'])
     await assert.rejects(sendNudgeOp(rt, t.id, {}, fakeSend(calls)), /only a waiting nudge/)
   }))
 
+test('a nudge that fails on its own waits for you; your Send posts your edit in the thread and logs it as yours', () =>
+  withRuntime(async (rt) => {
+    const calls: ApprovedSend[] = []
+    const t = await draftNudgeOp(rt, { itemId: SLACK.id }, { items: items(SLACK), send: fakeSend(calls, false) })
+    assert.equal(t.state, 'waiting')
+    assert.equal(await rt.store.config.get(NUDGES_SENT_KEY), null)
+
+    const done = await sendNudgeOp(rt, t.id, { text: 'Hi @priya, is the 4.2 checklist final? It blocks the release.' }, fakeSend(calls))
+    assert.equal(done.state, 'done')
+    assert.deepEqual(calls.at(-1), { channel: 'C0123ABCD', threadTs: '1729500000.000100', message: 'Hi @priya, is the 4.2 checklist final? It blocks the release.' })
+    await rt.actionChain
+    const recs = (await rt.store.actions.list()).filter((r) => r.sessionId === `task-${t.id}` && r.status === 'succeeded')
+    assert.equal(recs[0]?.allowedBy, 'prompt')
+  }))
+
 test('a send that fails keeps the nudge waiting and starts no cooldown', () =>
   withRuntime(async (rt) => {
     const calls: ApprovedSend[] = []
-    const t = await draftNudgeOp(rt, { itemId: SLACK.id }, { items: items(SLACK), send: fakeSend(calls) })
+    const t = await draftNudgeOp(rt, { itemId: SLACK.id }, { items: items(SLACK), send: fakeSend(calls, false) })
     await assert.rejects(sendNudgeOp(rt, t.id, {}, fakeSend(calls, false)), /Slack said no/)
     assert.equal((await rt.store.tasks.get(t.id))?.state, 'waiting')
     assert.equal(await rt.store.config.get(NUDGES_SENT_KEY), null)
-  }))
-
-test('an approval you wrote for the channel sends the drafted nudge alone, recorded as allowed by your rule', () =>
-  withRuntime(async (rt) => {
-    await rt.store.approvals.put(channelApproval('C0123ABCD'))
-    const calls: ApprovedSend[] = []
-    const t = await draftNudgeOp(rt, { itemId: SLACK.id }, { items: items(SLACK), send: fakeSend(calls) })
-    assert.equal(t.state, 'done')
-    assert.equal(calls.length, 1)
-    await rt.actionChain
-    const recs = (await rt.store.actions.list()).filter((r) => r.sessionId === `task-${t.id}`)
-    assert.equal(recs[0]?.allowedBy, 'rule')
-    assert.equal((await rt.store.approvals.list())[0]?.uses, 1)
   }))
 
 test('Draft nudge refuses an item nobody can be named on, and a person it does not wait on', () =>

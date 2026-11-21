@@ -61,8 +61,10 @@ import { defaultBranch } from '../worktrees.js'
 import type { WorkspaceRuntime } from '../workspace/runtime.js'
 import { broadcastSessionList, invalidateInbox } from '../ws/send.js'
 import { taskNeedsYou } from './notify.js'
-import { requestUnderApproval } from './ops.js'
-import { botRepliesUnderApproval } from './bot-replies.js'
+import { requestOnItsOwn } from './ops.js'
+import { postReviewOp } from '../review/post.js'
+import { sendReplyOp } from '../playbooks/ops.js'
+import { botRepliesOnTheirOwn } from './bot-replies.js'
 import { repliesTask } from '../../core/babysit/bot-replies.js'
 
 /** A task session gives up after this: a hung run never holds a slot all day. */
@@ -539,14 +541,14 @@ function submitTriageTool(rt: WorkspaceRuntime, sessionId: string) {
       if (!done) return errResult('This task moved on before the hand-in landed.')
       const now = Date.now()
       for (const fix of r.fixes) await rt.store.tasks.add({ ...fix, itemId: run.itemId }, now)
-      // The won't fix and incorrect replies: one task on you. A rule you wrote may send some alone; the rest wait.
+      // The won't fix and incorrect replies: they go out on their own; a failed send waits for you.
       const spec = repliesTask(t.id, triageThreadsOf(t.input), r.verdicts)
       const send = spec ? await rt.store.tasks.add({ ...spec, itemId: run.itemId }, now) : null
       if (send)
         fireAndLog(
           rt,
           'tasks',
-          botRepliesUnderApproval(rt, send).then((settled) => {
+          botRepliesOnTheirOwn(rt, send).then((settled) => {
             if (!settled) taskNeedsYou(rt, { kind: 'bot-replies', task: send })
           }),
         )
@@ -557,13 +559,14 @@ function submitTriageTool(rt: WorkspaceRuntime, sessionId: string) {
 }
 
 /**
- * The answer's hand-in: the draft reply. It becomes "Send reply", a task on
- * you with the reply on an editable card. Nothing is sent from here.
+ * The answer's hand-in: the draft reply. It becomes "Send reply" and goes out
+ * on its own where Junior can send it (a Slack thread); elsewhere, or when the
+ * send fails, it waits on you with the reply on an editable card.
  */
 function submitReplyTool(rt: WorkspaceRuntime, sessionId: string) {
   return tool(
     'submit_reply',
-    'Hand in the draft reply, once, at the end. Nothing is sent: the user reads it, edits it if they want, and sends it. Then end your turn.',
+    'Hand in the reply, once, at the end. Junior sends it to the thread as written, and the user sees it in the log. Then end your turn.',
     {
       reply: z.string().min(1).max(MAX_REPLY_CHARS).describe('the message as the user would send it, Slack markdown'),
       summary: z.string().min(1).max(300).describe('one line for the user: what you answered'),
@@ -590,7 +593,15 @@ function submitReplyTool(rt: WorkspaceRuntime, sessionId: string) {
         },
         Date.now(),
       )
-      if (send) taskNeedsYou(rt, { kind: 'reply', task: send })
+      if (send)
+        fireAndLog(
+          rt,
+          'tasks',
+          sendReplyOp(rt, send.id, {}, true).catch((err) => {
+            log('info', 'tasks', `the reply waits for you: ${errText(err)}`, { task: send.id, workspace: rt.meta.id })
+            taskNeedsYou(rt, { kind: 'reply', task: send })
+          }),
+        )
       tasksChanged(rt)
       return okResult('Handed in. End your turn now.')
     },
@@ -779,7 +790,15 @@ function submitReviewTool(rt: WorkspaceRuntime, sessionId: string) {
           },
           Date.now(),
         )
-        if (post) taskNeedsYou(rt, { kind: 'post-review', task: post, verdict: pass.verdict })
+        if (post)
+          fireAndLog(
+            rt,
+            'tasks',
+            postReviewOp(rt, post.id, {}, true).catch((err) => {
+              log('info', 'review', `the review waits for you: ${errText(err)}`, { task: post.id, workspace: rt.meta.id })
+              taskNeedsYou(rt, { kind: 'post-review', task: post, verdict: pass.verdict })
+            }),
+          )
         tasksChanged(rt)
         return okResult(JSON.stringify(toolResult(made, attachedHint('review'))))
       } catch (err) {
@@ -807,12 +826,12 @@ This is a headless review session: nobody reads this chat while it runs. Read th
 
 onTaskAdded((rt, task, stuck) => {
   if (stuck) taskNeedsYou(rt, { kind: 'stuck', task })
-  // Approved in advance: the request goes out alone and nothing pings you. Else it waits for you.
+  // The request goes out on its own and nothing pings you; with no reviewer known, or a failed send, it waits for you.
   else if (task.step === 'request-review')
     fireAndLog(
       rt,
       'tasks',
-      requestUnderApproval(rt, task).then((sent) => {
+      requestOnItsOwn(rt, task).then((sent) => {
         if (!sent) taskNeedsYou(rt, { kind: 'review', task })
       }),
     )

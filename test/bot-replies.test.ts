@@ -38,7 +38,7 @@ const home = mkdtempSync(path.join(os.tmpdir(), 'junior-bot-replies-'))
 process.env.JUNIOR_HOME = home
 process.env.JUNIOR_NO_NOTIFY = '1'
 const { openSqliteStore } = await import('../core/store/sqlite.js')
-const { sendBotRepliesOp, botRepliesUnderApproval } = await import('../server/tasks/bot-replies.js')
+const { sendBotRepliesOp, botRepliesOnTheirOwn } = await import('../server/tasks/bot-replies.js')
 
 const thread = (id: string, over: Partial<TriageThread> = {}): TriageThread => ({
   id,
@@ -246,13 +246,24 @@ async function addRepliesTask(rt: WorkspaceRuntime) {
 const replyCalls = (calls: string[][]) => calls.filter((c) => c.some((a) => a.includes('addPullRequestReviewThreadReply')))
 const taskRecords = async (rt: WorkspaceRuntime, taskId: string) => (await rt.store.actions.list()).filter((r) => r.sessionId === `task-${taskId}`)
 
-test('with no approval, nothing posts on its own: the task waits, GitHub is never called', () =>
+test('Junior’s replies go out on their own, as drafted, each recorded as sent without asking; the tally skips them', () =>
   withRuntime(async (rt, calls) => {
     const t = await addRepliesTask(rt)
-    assert.equal(await botRepliesUnderApproval(rt, t, fakeGh(calls)), false)
-    assert.equal(calls.length, 0)
+    assert.equal(await botRepliesOnTheirOwn(rt, t, fakeGh(calls)), true)
+    assert.deepEqual(replyCalls(calls).map((c) => c.find((a) => a.startsWith('id='))).sort(), ['id=T2', 'id=T3', 'id=T4'])
+    assert.equal((await rt.store.tasks.get(t.id))?.state, 'done')
+    await rt.actionChain
+    const recs = await taskRecords(rt, t.id)
+    assert.equal(recs.length, 3)
+    assert.ok(recs.every((r) => r.allowedBy === 'policy' && r.allowedDetail === 'sent without asking'))
+    assert.deepEqual(tallyFrom(await rt.store.config.get(BOT_TALLY_KEY)), {})
+  }))
+
+test('a reply that fails on its own leaves the task waiting for you', () =>
+  withRuntime(async (rt, calls) => {
+    const t = await addRepliesTask(rt)
+    assert.equal(await botRepliesOnTheirOwn(rt, t, fakeGh(calls, 'T3')), false)
     assert.equal((await rt.store.tasks.get(t.id))?.state, 'waiting')
-    assert.equal((await taskRecords(rt, t.id)).length, 0)
   }))
 
 test('your Send posts each reply, resolves each thread, one log record per reply, and the tally learns', () =>
@@ -305,21 +316,4 @@ test('a reply that fails keeps the task waiting with the rest handled; Send agai
     const done = await sendBotRepliesOp(rt, t.id, {}, fakeGh(calls))
     assert.equal(done.state, 'done')
     assert.deepEqual(replyCalls(calls).map((c) => c.find((a) => a.startsWith('id='))), ['id=T3'])
-  }))
-
-test('an approval you wrote for one bot sends that bot’s replies alone; the rest wait; the tally skips them', () =>
-  withRuntime(async (rt, calls) => {
-    await rt.store.approvals.put(botApproval('coderabbitai', BOT_REPLY_STEP))
-    const t = await addRepliesTask(rt)
-    assert.equal(await botRepliesUnderApproval(rt, t, fakeGh(calls)), false)
-    assert.deepEqual(replyCalls(calls).map((c) => c.find((a) => a.startsWith('id='))), ['id=T2', 'id=T4'])
-    const after = (await rt.store.tasks.get(t.id))!
-    assert.equal(after.state, 'waiting')
-    assert.deepEqual(after.output?.handled, ['T2', 'T4'])
-    await rt.actionChain
-    const recs = await taskRecords(rt, t.id)
-    assert.equal(recs.length, 2)
-    assert.ok(recs.every((r) => r.allowedBy === 'rule' && /reply to CodeRabbit/.test(r.allowedDetail ?? '')))
-    assert.deepEqual(tallyFrom(await rt.store.config.get(BOT_TALLY_KEY)), {})
-    assert.equal((await rt.store.approvals.list())[0]?.uses, 2)
   }))

@@ -1,14 +1,14 @@
 /**
- * What you do with a first pass from the item page: post it (as you edited
- * it), or have Junior read the PR again. Posting is the one send of the
- * review playbook, and only your OK sends it: no advance approval covers it
- * in M3. It lands in Junior's log under Sent like any send.
+ * A first pass, posted: on its own as soon as the pass is in, like every send
+ * (core/actions/policy.ts), or from the item page when that failed (as you
+ * edited it). Or have Junior read the PR again. It lands in Junior's log under
+ * Sent like any send.
  */
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { recordFor } from '../../core/actions/track.js'
-import type { ActionRecord } from '../../core/actions/types.js'
+import { type ActionRecord, SENT_WITHOUT_ASKING } from '../../core/actions/types.js'
 import type { FirstPass } from '../../core/review/brief.js'
 import { diffLines, postedLine, postEditFrom, reviewPayload, type ReviewPayload } from '../../core/review/post.js'
 import { POST_REVIEW_STEP, REVIEW_STEP } from '../../core/review/watch.js'
@@ -34,8 +34,8 @@ async function diffAt(pr: { repo: string; number: number }, sha: string): Promis
   return gh(['api', '-H', 'Accept: application/vnd.github.diff', `repos/${pr.repo}/compare/${base}...${sha}`])
 }
 
-/** You OK'd the review on the card: it goes out, as the card showed it. */
-export async function postReviewOp(rt: WorkspaceRuntime, taskId: string, raw: unknown): Promise<ItemTask> {
+/** The review goes out: on its own (`auto`) as Junior wrote it, or from the card as it showed it. */
+export async function postReviewOp(rt: WorkspaceRuntime, taskId: string, raw: unknown, auto = false): Promise<ItemTask> {
   const t = await rt.store.tasks.get(taskId)
   if (!t) throw new Error('no such task')
   if (t.step !== POST_REVIEW_STEP || t.state !== 'waiting') throw new Error('only a waiting review can be posted')
@@ -58,7 +58,7 @@ export async function postReviewOp(rt: WorkspaceRuntime, taskId: string, raw: un
     url = res.html_url ?? null
   } catch (err) {
     await rt.store.tasks.move(t.id, 'waiting', { error: errText(err) }, Date.now())
-    await record(rt, t, pr, payload, command, at, null, errText(err))
+    await record(rt, t, pr, payload, command, at, null, errText(err), auto)
     tasksChanged(rt)
     throw err
   } finally {
@@ -67,15 +67,15 @@ export async function postReviewOp(rt: WorkspaceRuntime, taskId: string, raw: un
   await rt.store.tasks.move(t.id, 'running', {}, Date.now())
   const summary = `${postedLine(payload)}${folded ? ` (${folded} off the diff, in the body)` : ''}`
   const done = await rt.store.tasks.move(t.id, 'done', { output: { summary, sha: pass.sha, verdict: edit.verdict ?? pass.verdict } }, Date.now())
-  await rt.store.items.addDecision(t.itemId, { at: Date.now(), by: 'you', text: summary, taskId: t.id })
-  await record(rt, t, pr, payload, command, at, url, null)
+  await rt.store.items.addDecision(t.itemId, { at: Date.now(), by: auto ? 'junior' : 'you', text: auto ? `${summary} (sent without asking)` : summary, taskId: t.id })
+  await record(rt, t, pr, payload, command, at, url, null, auto)
   log('info', 'review', `${summary} on ${pr.repo}#${pr.number}`, { task: t.id, workspace: rt.meta.id })
   tasksChanged(rt)
   return done!
 }
 
 /** The review as an action record, so Junior's log lists it under Sent with who allowed it. */
-async function record(rt: WorkspaceRuntime, t: ItemTask, pr: { repo: string; number: number }, p: ReviewPayload, command: string, at: number, url: string | null, error: string | null): Promise<void> {
+async function record(rt: WorkspaceRuntime, t: ItemTask, pr: { repo: string; number: number }, p: ReviewPayload, command: string, at: number, url: string | null, error: string | null, auto: boolean): Promise<void> {
   const now = Date.now()
   const rec: ActionRecord = {
     ...recordFor(
@@ -89,8 +89,8 @@ async function record(rt: WorkspaceRuntime, t: ItemTask, pr: { repo: string; num
     status: error ? 'failed' : 'succeeded',
     link: url ?? `https://github.com/${pr.repo}/pull/${pr.number}`,
     error,
-    allowedBy: 'prompt',
-    allowedDetail: 'on the item page',
+    allowedBy: auto ? 'policy' : 'prompt',
+    allowedDetail: auto ? SENT_WITHOUT_ASKING : 'on the item page',
     settledAt: now,
     updatedAt: now,
   }

@@ -189,3 +189,6 @@ export type SendCheck = {
   /** a free send let through by an advance approval: which one */
   approval?: string
 }
+
+/** What a send the policy let out on its own says it was allowed by (`allowedBy: 'policy'`). */
+export const SENT_WITHOUT_ASKING = 'sent without asking'

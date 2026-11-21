@@ -5,7 +5,7 @@
  * Only your OK sends the reply, and it lands in Junior's log under Sent.
  */
 import { recordFor } from '../../core/actions/track.js'
-import type { ActionRecord } from '../../core/actions/types.js'
+import { type ActionRecord, SENT_WITHOUT_ASKING } from '../../core/actions/types.js'
 import { APPROVE_PLAN_STEP, DEBUG_FIX_STEP, DEBUG_PLAN_STEP, DECIDE_STEP, INVESTIGATE_STEP, MAX_REPLY_CHARS, SEND_REPLY_STEP, slackThreadOf } from '../../core/playbooks/item.js'
 import { isApprovedSend, sendPrompt, sentLink, SLACK_SEND_TOOL, type ApprovedSend } from '../../core/playbooks/send.js'
 import type { ItemTask } from '../../core/work/tasks.js'
@@ -28,11 +28,11 @@ async function waitingTask(rt: WorkspaceRuntime, taskId: string, step: string, w
 }
 
 /**
- * You OK'd the reply on the card (as you edited it): it goes to the thread,
- * exactly as the card showed it. Slack only for now; elsewhere the card
+ * The reply goes to the thread: on its own (`auto`) as Junior drafted it, or
+ * from the card as you edited it. Slack only for now; elsewhere the card
  * copies it and you mark it sent.
  */
-export async function sendReplyOp(rt: WorkspaceRuntime, taskId: string, raw: unknown): Promise<ItemTask> {
+export async function sendReplyOp(rt: WorkspaceRuntime, taskId: string, raw: unknown, auto = false): Promise<ItemTask> {
   const t = await waitingTask(rt, taskId, SEND_REPLY_STEP, 'reply sent')
   const item = await rt.store.items.get(t.itemId)
   if (!item) throw new Error('the item is gone')
@@ -62,15 +62,15 @@ export async function sendReplyOp(rt: WorkspaceRuntime, taskId: string, raw: unk
   if (!called) {
     // nothing went out: it waits on the card again
     await rt.store.tasks.move(t.id, 'waiting', { error: error ?? 'the send did not happen' }, Date.now())
-    await record(rt, t, want, at, null, error ?? 'the send did not happen')
+    await record(rt, t, want, at, null, error ?? 'the send did not happen', auto)
     tasksChanged(rt)
     throw new Error(error ?? 'the send did not happen')
   }
   // The call went through the veto: it is sent, never retried on our own (a retry could post twice).
   const summary = `Sent: ${firstLine(message)}`
   const done = await rt.store.tasks.move(t.id, 'done', { output: { summary } }, Date.now())
-  await rt.store.items.addDecision(t.itemId, { at: Date.now(), by: 'you', text: `Replied in Slack: ${firstLine(message)}`, taskId: t.id })
-  await record(rt, t, want, at, link, null)
+  await rt.store.items.addDecision(t.itemId, { at: Date.now(), by: auto ? 'junior' : 'you', text: `Replied in Slack: ${firstLine(message)}${auto ? ' (sent without asking)' : ''}`, taskId: t.id })
+  await record(rt, t, want, at, link, null, auto)
   log('info', 'playbooks', `reply sent to ${item.id}${link ? `: ${link}` : ''}`, { task: t.id, workspace: rt.meta.id })
   tasksChanged(rt)
   return done!
@@ -123,8 +123,8 @@ export async function runSend(rt: WorkspaceRuntime, want: ApprovedSend): Promise
   }
 }
 
-/** The send as an action record: Junior's log lists it under Sent, allowed by you on the item page. */
-async function record(rt: WorkspaceRuntime, t: ItemTask, want: ApprovedSend, at: number, link: string | null, error: string | null): Promise<void> {
+/** The send as an action record: Junior's log lists it under Sent, sent without asking or allowed by you on the item page. */
+async function record(rt: WorkspaceRuntime, t: ItemTask, want: ApprovedSend, at: number, link: string | null, error: string | null, auto: boolean): Promise<void> {
   const now = Date.now()
   const rec: ActionRecord = {
     ...recordFor(
@@ -138,8 +138,8 @@ async function record(rt: WorkspaceRuntime, t: ItemTask, want: ApprovedSend, at:
     status: error ? 'failed' : 'succeeded',
     link,
     error,
-    allowedBy: 'prompt',
-    allowedDetail: 'on the item page',
+    allowedBy: auto ? 'policy' : 'prompt',
+    allowedDetail: auto ? SENT_WITHOUT_ASKING : 'on the item page',
     settledAt: now,
     updatedAt: now,
   }

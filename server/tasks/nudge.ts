@@ -17,8 +17,7 @@
  * cooldown (config NUDGES_SENT_KEY).
  */
 import { recordFor } from '../../core/actions/track.js'
-import type { ActionRecord } from '../../core/actions/types.js'
-import { type AdvanceApproval, allowedDetailFor, describeApproval } from '../../core/approvals/approvals.js'
+import { type ActionRecord, SENT_WITHOUT_ASKING } from '../../core/actions/types.js'
 import { MAX_REPLY_CHARS, slackThreadOf } from '../../core/playbooks/item.js'
 import { SLACK_SEND_TOOL, type ApprovedSend } from '../../core/playbooks/send.js'
 import { NUDGE_DEFAULTS, personKey, type NudgeSent } from '../../core/work/nudge.js'
@@ -38,7 +37,6 @@ import {
 import type { ItemTask } from '../../core/work/tasks.js'
 import type { TurnContext } from '../../core/work/turn.js'
 import type { ScoredItem, WorkItem } from '../../core/work/types.js'
-import { coveringApproval, useApproval } from '../approvals-ops.js'
 import { errText } from '../errors.js'
 import { getInbox } from '../inbox/sync.js'
 import { log } from '../log.js'
@@ -105,16 +103,16 @@ export async function draftNudgeOp(rt: WorkspaceRuntime, raw: unknown, deps: Nud
   if (!t) throw new Error('could not add the nudge')
   log('info', 'tasks', `nudge drafted for ${spec.input.person} on ${itemId}`, { task: t.id, workspace: rt.meta.id })
   tasksChanged(rt)
-  if (await nudgeUnderApproval(rt, t, deps.send)) return (await rt.store.tasks.get(t.id)) ?? t
+  if (await nudgeOnItsOwn(rt, t, deps.send)) return (await rt.store.tasks.get(t.id)) ?? t
   return t
 }
 
 /**
- * The nudge was just drafted: an advance approval you wrote for the Slack
- * channel it lands in sends it alone, as drafted. False = none covers it (or
- * it failed, or the source has no reply route): it waits for you.
+ * The nudge was just drafted: it goes out on its own, as drafted, like every
+ * send (core/actions/policy.ts). False = it failed, or the source has no
+ * reply route: it waits for you.
  */
-export async function nudgeUnderApproval(rt: WorkspaceRuntime, t: ItemTask, send: NudgeSend = slackSend): Promise<boolean> {
+export async function nudgeOnItsOwn(rt: WorkspaceRuntime, t: ItemTask, send: NudgeSend = slackSend): Promise<boolean> {
   const input = nudgeInputOf(t.input)
   if (t.step !== NUDGE_STEP || t.state !== 'waiting' || !input) return false
   const item = await rt.store.items.get(t.itemId)
@@ -122,13 +120,11 @@ export async function nudgeUnderApproval(rt: WorkspaceRuntime, t: ItemTask, send
   if (!item || !route.send || route.via !== 'slack-thread') return false
   const thread = slackThreadOf(item.url)
   if (!thread) return false
-  const rule = await coveringApproval(rt, SLACK_SEND_TOOL, { channel_id: thread.channel })
-  if (!rule) return false
   try {
-    await carryOut(rt, t, item, input.person, input.text, rule, send)
+    await carryOut(rt, t, item, input.person, input.text, true, send)
     return true
   } catch (err) {
-    log('warn', 'tasks', `an approved nudge failed, it waits for you: ${errText(err)}`, { task: t.id, workspace: rt.meta.id })
+    log('warn', 'tasks', `a nudge failed, it waits for you: ${errText(err)}`, { task: t.id, workspace: rt.meta.id })
     return false
   }
 }
@@ -160,11 +156,11 @@ export async function sendNudgeOp(rt: WorkspaceRuntime, taskId: string, raw: unk
   // The route is read again from the source, never from what the draft carried.
   const route = nudgeRoute(item.source)
   if (!route.send) throw new Error('Junior can’t send here: copy the text, send it, then mark it sent')
-  return carryOut(rt, t, item, input.person, text, null, send)
+  return carryOut(rt, t, item, input.person, text, false, send)
 }
 
 /** The send: claimed, sent once, recorded on the task, the item, Junior's log and the cooldown. */
-async function carryOut(rt: WorkspaceRuntime, t: ItemTask, item: WorkItem, person: string, text: string, rule: AdvanceApproval | null, send: NudgeSend): Promise<ItemTask> {
+async function carryOut(rt: WorkspaceRuntime, t: ItemTask, item: WorkItem, person: string, text: string, auto: boolean, send: NudgeSend): Promise<ItemTask> {
   const route = nudgeRoute(item.source)
   if (!route.send || route.via !== 'slack-thread') throw new Error('Junior can’t send here: copy the text, send it, then mark it sent')
   const thread = slackThreadOf(item.url)
@@ -179,7 +175,7 @@ async function carryOut(rt: WorkspaceRuntime, t: ItemTask, item: WorkItem, perso
   if (!res.called) {
     const error = res.error ?? 'the send did not happen'
     await rt.store.tasks.move(t.id, 'waiting', { error }, Date.now())
-    await record(rt, t, person, want, rule, at, null, error)
+    await record(rt, t, person, want, auto, at, null, error)
     tasksChanged(rt)
     throw new Error(error)
   }
@@ -187,11 +183,10 @@ async function carryOut(rt: WorkspaceRuntime, t: ItemTask, item: WorkItem, perso
   await rt.store.tasks.move(t.id, 'running', {}, Date.now())
   const summary = `Nudged ${person}: ${firstLine(text)}`
   const done = await rt.store.tasks.move(t.id, 'done', { output: { summary } }, Date.now())
-  await rt.store.items.addDecision(t.itemId, { at: Date.now(), by: rule ? 'junior' : 'you', text: rule ? `${summary} (approved in advance: ${describeApproval(rule)})` : summary, taskId: t.id })
-  await record(rt, t, person, want, rule, at, res.link, null)
+  await rt.store.items.addDecision(t.itemId, { at: Date.now(), by: auto ? 'junior' : 'you', text: auto ? `${summary} (sent without asking)` : summary, taskId: t.id })
+  await record(rt, t, person, want, auto, at, res.link, null)
   await recordSent(rt, person, t.itemId)
-  if (rule) await useApproval(rt, rule, `task-${t.id}`, undefined)
-  log('info', 'tasks', `nudged ${person} on ${t.itemId}${rule ? ' (approved in advance)' : ''}`, { task: t.id, workspace: rt.meta.id })
+  log('info', 'tasks', `nudged ${person} on ${t.itemId}${auto ? ' (sent without asking)' : ''}`, { task: t.id, workspace: rt.meta.id })
   tasksChanged(rt)
   return done ?? t
 }
@@ -212,7 +207,7 @@ const firstLine = (s: string) => {
 }
 
 /** The nudge as an action record: Junior's log lists it under Sent, with who allowed it. */
-async function record(rt: WorkspaceRuntime, t: ItemTask, person: string, want: ApprovedSend, rule: AdvanceApproval | null, at: number, link: string | null, error: string | null): Promise<void> {
+async function record(rt: WorkspaceRuntime, t: ItemTask, person: string, want: ApprovedSend, auto: boolean, at: number, link: string | null, error: string | null): Promise<void> {
   const now = Date.now()
   const rec: ActionRecord = {
     ...recordFor(
@@ -226,8 +221,8 @@ async function record(rt: WorkspaceRuntime, t: ItemTask, person: string, want: A
     status: error ? 'failed' : 'succeeded',
     link,
     error,
-    allowedBy: rule ? 'rule' : 'prompt',
-    allowedDetail: rule ? allowedDetailFor(rule) : 'on the item page',
+    allowedBy: auto ? 'policy' : 'prompt',
+    allowedDetail: auto ? SENT_WITHOUT_ASKING : 'on the item page',
     settledAt: now,
     updatedAt: now,
   }
