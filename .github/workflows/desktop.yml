@@ -107,7 +107,7 @@ jobs:
         with:
           ref: ${{ inputs.tag || github.ref }}
 
-      # The installer that matches this release; usejunior.sh/install.sh
+      # The installer that matches this release; getjunior.dev/install.sh
       # redirects to releases/latest/download/install.sh.
       - name: Upload install.sh
         run: gh release upload "$TAG" install.sh --repo "$GITHUB_REPOSITORY" --clobber

@@ -16,7 +16,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { createInterface } from 'node:readline/promises'
 
-const REPO = 'usejunior-sh/junior'
+const REPO = 'getjunior-dev/junior'
 
 const argv = process.argv.slice(2)
 const option = (name) => {
@@ -26,7 +26,7 @@ const option = (name) => {
 const notesFile = option('--notes')
 const bump = argv.find((a) => !a.startsWith('--') && a !== notesFile) ?? 'patch'
 
-// The personal gh account (push on usejunior-sh/junior) lives in its own config
+// The personal gh account (push on getjunior-dev/junior) lives in its own config
 // dir; direnv sets it in this repo, but a shell without direnv would get the
 // work account and fail at `gh release create`.
 const ghConfig = path.join(os.homedir(), '.config', 'gh-triage')
@@ -98,7 +98,7 @@ if (notesFile) {
   writeFileSync(
     draft,
     [
-      'Install or update: `curl -fsSL https://usejunior.sh/install.sh | sh`',
+      'Install or update: `curl -fsSL https://getjunior.dev/install.sh | sh`',
       '',
       '### Added',
       '',
@@ -144,4 +144,4 @@ v${version} is tagged and drafted. CI builds Junior.app and publishes it (~15–
   gh run list --repo ${REPO} --workflow desktop.yml --limit 1
   gh run watch <run-id> --repo ${REPO} --exit-status
 
-then update this Mac:  curl -fsSL https://usejunior.sh/install.sh | sh  &&  junior restart`)
+then update this Mac:  curl -fsSL https://getjunior.dev/install.sh | sh  &&  junior restart`)

@@ -7,7 +7,7 @@ import { chromium } from 'playwright-core'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const root = path.resolve(here, '../..')
-const url = process.argv[2] ?? 'https://usejunior.sh/'
+const url = process.argv[2] ?? 'https://getjunior.dev/'
 
 const browser = await chromium.launch({ channel: 'chrome' }).catch(() => chromium.launch())
 try {

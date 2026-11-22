@@ -8,7 +8,7 @@
 .teamSide {
   width: var(--team-side-w); flex: none; display: flex; flex-direction: column; min-height: 0;
   background: var(--deep); border-right: 1px solid var(--hair);
-  /* Type as on usejunior.sh: rows at 14px, second lines at 13px, labels mono 11px spaced 0.12em. */
+  /* Type as on getjunior.dev: rows at 14px, second lines at 13px, labels mono 11px spaced 0.12em. */
   font-size: 1rem; line-height: 1.4;
 }
 .teamSide button { box-sizing: border-box; }

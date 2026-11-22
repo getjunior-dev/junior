@@ -1,4 +1,4 @@
-<a href="https://usejunior.sh">
+<a href="https://getjunior.dev">
   <img src="docs/banner.png" alt="Junior. Runs on your Mac. Asks before anything goes out. A junior engineer for senior engineers. Junior watches GitHub, Slack, Linear and your other tools. It brings you what needs you. Free, open source, runs on your Mac. Junior's face, a lavender key drawn in dots, stands on a dotted ridge on the right." width="100%">
 </a>
 
@@ -9,14 +9,14 @@
   <a href="#features">Features</a> ·
   <a href="#fair-questions">FAQ</a> ·
   <a href="#development">Development</a> ·
-  <a href="https://usejunior.sh">Website</a>
+  <a href="https://getjunior.dev">Website</a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/usejunior-sh/junior/releases/latest"><img src="https://img.shields.io/github/v/release/usejunior-sh/junior?label=release&color=a593f5&labelColor=16131f" alt="latest release"></a>
+  <a href="https://github.com/getjunior-dev/junior/releases/latest"><img src="https://img.shields.io/github/v/release/getjunior-dev/junior?label=release&color=a593f5&labelColor=16131f" alt="latest release"></a>
   <img src="https://img.shields.io/badge/macOS-Apple%20silicon%20%C2%B7%20Intel-f8f7fc?labelColor=16131f" alt="macOS, Apple silicon or Intel">
   <img src="https://img.shields.io/badge/runs%20on-Claude%20Code%20%C2%B7%20Codex-cbbffa?labelColor=16131f" alt="runs on Claude Code and Codex">
-  <a href="https://github.com/usejunior-sh/junior/commits/main"><img src="https://img.shields.io/github/last-commit/usejunior-sh/junior?color=f8f7fc&labelColor=16131f" alt="last commit"></a>
+  <a href="https://github.com/getjunior-dev/junior/commits/main"><img src="https://img.shields.io/github/last-commit/getjunior-dev/junior?color=f8f7fc&labelColor=16131f" alt="last commit"></a>
 </p>
 
 <sub>RUNS ON YOUR MAC. ASKS BEFORE ANYTHING GOES OUT.</sub>
@@ -26,7 +26,7 @@
 Junior watches GitHub, Slack, Linear and your other tools. It brings you what needs you. It takes the rest, and asks before anything goes out. It runs on your Mac, learns how you work, and needs you a little less each week.
 
 ```sh
-curl -fsSL https://usejunior.sh/install.sh | sh
+curl -fsSL https://getjunior.dev/install.sh | sh
 ```
 
 <sub>Installs Junior.app for macOS, Apple silicon or Intel. <a href="install.sh">Read install.sh first.</a> We would.</sub>
@@ -73,7 +73,7 @@ Three steps. One of them is reading a shell script.
 **01 · Install the Mac app.** One line in Terminal. The app isn't notarized yet, so read [install.sh](install.sh) first. We would.
 
 ```sh
-$ curl -fsSL https://usejunior.sh/install.sh | sh
+$ curl -fsSL https://getjunior.dev/install.sh | sh
 → Junior.app installed
 → junior, junior-mcp in ~/.local/bin
 ```
@@ -209,7 +209,7 @@ The app isn't notarized by Apple yet, so a browser download would get blocked. T
 **Let Junior do the triage.** One line installs it. Free and open source, on the Claude Code or Codex plan you already pay for. No account, no card.
 
 ```sh
-curl -fsSL https://usejunior.sh/install.sh | sh
+curl -fsSL https://getjunior.dev/install.sh | sh
 ```
 
 Run the same line again to update. Junior.app brings its own Node, so there's nothing to install from npm. On launch it attaches to the Junior already running, or starts one. More in [desktop/README.md](desktop/README.md).
@@ -270,7 +270,7 @@ Everything runs on your Mac. Data lives in SQLite under `~/.junior`, one databas
 ## Development
 
 ```sh
-git clone https://github.com/usejunior-sh/junior && cd junior
+git clone https://github.com/getjunior-dev/junior && cd junior
 npm install
 npm run dev          # server on :5188, Vite on :5189. Open the Vite URL.
 ```
@@ -293,9 +293,9 @@ The server is not run under a file watcher on purpose: restarting it kills live 
 
 <p align="center">
   <sub>
-    <a href="https://usejunior.sh">usejunior.sh</a> ·
-    <a href="https://usejunior.sh/changelog">Changelog</a> ·
-    <a href="https://github.com/usejunior-sh/junior/issues">Issues</a> ·
+    <a href="https://getjunior.dev">getjunior.dev</a> ·
+    <a href="https://getjunior.dev/changelog">Changelog</a> ·
+    <a href="https://github.com/getjunior-dev/junior/issues">Issues</a> ·
     MIT licence
   </sub>
 </p>

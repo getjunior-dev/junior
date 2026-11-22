@@ -145,7 +145,7 @@
   --app-font-size: 14px;
   color-scheme: dark;
   /* The Text-size control scales every rem-based font-size in the app off this
-     root size (14px = 1rem, as on usejunior.sh). Paddings/dimensions stay in px, so text grows
+     root size (14px = 1rem, as on getjunior.dev). Paddings/dimensions stay in px, so text grows
      without the layout growing. That is what separates it from browser zoom. */
   font-size: var(--app-font-size, 14px);
 }

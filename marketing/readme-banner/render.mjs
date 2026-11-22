@@ -1,6 +1,6 @@
 // Renders the README banner (docs/banner.png) from the website's dev-only
 // /og/readme stage: the share card's look on a 1280x460 stage, at 2x.
-// Needs the site's `next dev` running (usejunior.sh repo, :3000).
+// Needs the site's `next dev` running (getjunior.dev repo, :3000).
 // Run: node marketing/readme-banner/render.mjs [url]
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'

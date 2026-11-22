@@ -38,7 +38,7 @@ server is Node: nothing in `server/` or `core/` is ported.
   counts as "local" in `server/remote.ts`, so no pairing.
 - **Distribution without an Apple Developer ID**: ad-hoc signed
   (`codesign --force --deep -s -`), shipped as a zip on the GitHub release,
-  installed by `curl -fsSL https://usejunior.sh/install.sh | sh` (curl sets no
+  installed by `curl -fsSL https://getjunior.dev/install.sh | sh` (curl sets no
   quarantine xattr; the script strips it anyway). Homebrew is not an escape
   hatch — unsigned casks are gone from the official tap.
 

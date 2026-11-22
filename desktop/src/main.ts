@@ -493,8 +493,8 @@ function buildMenu(): Menu {
     {
       role: 'help',
       submenu: [
-        { label: 'usejunior.sh', click: () => void shell.openExternal('https://usejunior.sh') },
-        { label: 'Junior on GitHub', click: () => void shell.openExternal('https://github.com/usejunior-sh/junior') },
+        { label: 'getjunior.dev', click: () => void shell.openExternal('https://getjunior.dev') },
+        { label: 'Junior on GitHub', click: () => void shell.openExternal('https://github.com/getjunior-dev/junior') },
       ],
     },
   ]

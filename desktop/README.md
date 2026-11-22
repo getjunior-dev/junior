@@ -8,7 +8,7 @@ window of its own. Nothing in `server/` or `core/` is ported. The design and the
 ## Install
 
 ```sh
-curl -fsSL https://usejunior.sh/install.sh | sh
+curl -fsSL https://getjunior.dev/install.sh | sh
 ```
 
 [`install.sh`](../install.sh) downloads `Junior-<version>-mac-<arch>.zip` from

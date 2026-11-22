@@ -5,9 +5,9 @@
   "description": "Ranked work inbox for engineers — every item arrives with its action drafted, dispatch straight into your local Claude Code",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/usejunior-sh/junior.git"
+    "url": "git+https://github.com/getjunior-dev/junior.git"
   },
-  "homepage": "https://usejunior.sh",
+  "homepage": "https://getjunior.dev",
   "publishConfig": {
     "access": "public"
   },

@@ -1,7 +1,7 @@
 #!/bin/sh
 # Install Junior.app — a native macOS window over the local Junior daemon.
 #
-#   curl -fsSL https://usejunior.sh/install.sh | sh
+#   curl -fsSL https://getjunior.dev/install.sh | sh
 #
 # Environment:
 #   JUNIOR_VERSION      version to install (default: the latest GitHub release)
@@ -14,7 +14,7 @@
 
 set -eu
 
-REPO="usejunior-sh/junior"
+REPO="getjunior-dev/junior"
 APP="Junior.app"
 BUNDLE_ID="sh.usejunior.app"
 # Ours too: the Chrome-shim app `junior app install` wrote, before and after the rename.
@@ -226,7 +226,7 @@ link_cli() {
 # with the app's own Node (the server needs node:sqlite). Reinstall to repoint.
 APP="$1"
 [ -x "\$APP/Contents/Resources/node/bin/node" ] || {
-  echo "junior: $1 is missing — reinstall from https://usejunior.sh" >&2
+  echo "junior: $1 is missing — reinstall from https://getjunior.dev" >&2
   exit 1
 }
 exec "\$APP/Contents/Resources/node/bin/node" "\$APP/Contents/Resources/junior/dist/server/$script" "\$@"
