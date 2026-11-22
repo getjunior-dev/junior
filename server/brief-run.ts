@@ -1,8 +1,8 @@
 import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk'
-import { agentAppend, agentDisallowed } from '../core/junior/agents.js'
+import { agentAppend, agentDisallowed, agentTitle } from '../core/junior/agents.js'
 import { chatAgentNamed, chatAgentsFor } from './chat-agents.js'
 import { makeJobThreadMcp } from './jobs/thread-run.js'
-import { COORDINATOR_DISALLOWED, coordinatorAppend, threadAppend } from '../core/junior/coordinator.js'
+import { agentDmAppend, COORDINATOR_DISALLOWED, coordinatorAppend, threadAppend } from '../core/junior/coordinator.js'
 import { DM_COMPACT_WINDOW } from '../core/junior/dms.js'
 import { worklogAppend } from '../core/junior/worklog.js'
 import { worklogFor } from './worklog-ops.js'
@@ -143,9 +143,10 @@ export async function extrasFor(rt: WorkspaceRuntime, row: StoredSession): Promi
       const worklog = worklogAppend(await worklogFor(rt, now), now)
       return { systemAppend: `${identity}${coordinator}${memory}${worklog}${await juniorAppend(rt)}`, mcp: { browser: browserMcpFor(rt, row) }, disallowedTools: [...COORDINATOR_DISALLOWED], ...compact }
     }
-    // A thread Junior started from its own chat leads each reply with the sentence Junior's chat shows.
+    // A thread started from a DM (Junior's own or an agent's) leads each reply with the sentence that DM shows.
     const parent = row.startedBy ? rt.rows.get(row.startedBy) : undefined
-    const thread = parent?.kind === 'dm' && !parent.agent ? threadAppend(rt.persona.name) : ''
+    const parentAgent = parent?.kind === 'dm' && parent.agent ? await chatAgentNamed(rt, parent.agent) : null
+    const thread = parent?.kind === 'dm' ? threadAppend(agentTitle(rt.persona.name, parentAgent?.label)) : ''
     // A thread job's thread (server/jobs/thread-run.ts): the job's seen list as tools, and the run's spend cap while it runs.
     const job = row.kind === 'chat' && row.jobId ? await rt.store.jobs.get(row.jobId).catch(() => null) : null
     const jobMcp: Record<string, ReturnType<typeof makeJobThreadMcp>> = job ? { job: makeJobThreadMcp(rt, job, row.id) } : {}
@@ -153,7 +154,7 @@ export async function extrasFor(rt: WorkspaceRuntime, row: StoredSession): Promi
     const jobCap = cap != null ? { maxBudgetUsd: cap } : {}
     if (!agent) return { systemAppend: `${identity}${thread}${memory}${await juniorAppend(rt)}`, mcp: { browser: browserMcpFor(rt, row), ...jobMcp }, ...jobCap, ...compact }
     return {
-      systemAppend: `${identity}${thread}${agentAppend(agent, rt.persona.name)}${memory}${await juniorAppend(rt)}`,
+      systemAppend: `${identity}${thread}${agentAppend(agent, rt.persona.name)}${row.kind === 'dm' ? agentDmAppend(agentTitle(rt.persona.name, agent.label), agent.label) : ''}${memory}${await juniorAppend(rt)}`,
       mcp: { browser: browserMcpFor(rt, row), ...jobMcp },
       disallowedTools: agentDisallowed(agent),
       ...(agent.skills ? { skills: agent.skills } : {}),

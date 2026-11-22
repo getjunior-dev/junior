@@ -72,9 +72,32 @@ export function coordinatorAppend({ juniorName, agents, pins }: CoordinatorInput
 }
 
 /**
- * The system-prompt block for a thread Junior started from its own chat. The
- * first sentence of each reply is what Junior's chat shows and what the work
- * log keeps (threadReportLine), so it has to stand alone.
+ * An agent's own DM (CPO, Debugger, ...): a lighter coordinator rule. It keeps
+ * its tools, unlike Junior's DM, but real work still goes to a thread that
+ * talks as the same agent and reports back here, so the DM stays short.
+ * `title` is how the agent signs ("Junior · CPO"), `label` what start_session takes.
+ */
+export function agentDmAppend(title: string, label: string): string {
+  return [
+    `\n\n## Your DM hands work to threads`,
+    `This is the user's DM with you. It never ends, and every turn re-reads it, so keep work out of it.`,
+    `- Anything that edits a file, runs more than a quick command, or is over a minute of work is a thread.`,
+    `  Start it with start_session and \`agent: "${label}"\`, so it talks as you. One thread per task. It reports back to this DM.`,
+    `- Small questions and quick reads stay here: answer them directly.`,
+    `- A thread starts with none of this chat's context. Its prompt: the user's exact words in quotes first, then`,
+    `  "Context from ${title}:" with only the facts that matter, then "Pointers:" (ids, paths, links), then "Done when:" in one line.`,
+    `- Forward every image and file the user attached in \`attachments\`, by path.`,
+    `- Before you start a thread, read it back in one line. A follow-up for a thread that exists goes there with message_session.`,
+    `- To see where threads stand, use list_sessions and read_session.`,
+    `- After you start a thread, end your turn. Its report comes back to this chat.`,
+  ].join('\n')
+}
+
+/**
+ * The system-prompt block for a thread started from a DM: Junior's own, or an
+ * agent's (then `juniorName` is the agent's title, "Junior · CPO"). The first
+ * sentence of each reply is what the DM shows and what the work log keeps
+ * (threadReportLine), so it has to stand alone.
  */
 export function threadAppend(juniorName: string): string {
   const j = juniorName

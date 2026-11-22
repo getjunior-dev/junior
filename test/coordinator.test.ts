@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agentLines, COORDINATOR_DISALLOWED, coordinatorAppend, threadAppend } from '../core/junior/coordinator.js'
+import { agentDmAppend, agentLines, COORDINATOR_DISALLOWED, coordinatorAppend, threadAppend } from '../core/junior/coordinator.js'
 import { addPin } from '../core/junior/pins.js'
 
 const agents = [
@@ -52,4 +52,17 @@ test('active pins ride along', () => {
 
 test('no agents yet: threads run as plain Junior', () => {
   assert.match(agentLines([]), /start each thread as plain you, without `agent`/)
+})
+
+test("an agent's DM hands real work to threads that talk as the same agent", () => {
+  const text = agentDmAppend('Junior · CPO', 'CPO')
+  assert.match(text, /## Your DM hands work to threads/)
+  assert.match(text, /edits a file, runs more than a quick command, or is over a minute of work is a thread/)
+  assert.match(text, /start_session and `agent: "CPO"`/)
+  assert.match(text, /Small questions and quick reads stay here/)
+  assert.match(text, /"Context from Junior · CPO:"/)
+})
+
+test("a thread from an agent's DM names that agent as who started it", () => {
+  assert.match(threadAppend('Junior · CPO'), /Junior · CPO started this chat/)
 })
