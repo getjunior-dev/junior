@@ -93,8 +93,6 @@ import { needsYouCount } from '../../core/work/needs-you.js'
 const PR_REASONS = new Set(['your-pr', 'review-requested'])
 /** The band's menu reads a thread's own state; the sidebar adds what the day's needs point at. */
 const NO_NEEDS: ReadonlySet<string> = new Set()
-/** A thread you start from an agent's band, before its first message names it. */
-const NEW_THREAD = 'New thread'
 
 /** A place's tab: its own name and mark. */
 function placeTab(key: string): OpenTab | null {
@@ -583,7 +581,7 @@ export function App() {
   }, [team, sessions, owner, juniorTab.title, navigate])
   const newThread = useCallback(() => {
     const agent = dmAgent(owner)
-    const d = draftStore.all().find((x) => !x.home && !x.dm && !x.text.trim() && !x.intent && !x.itemId && x.label === NEW_THREAD && (x.agent || undefined) === agent) ?? draftStore.create({ label: NEW_THREAD, ...(agent ? { agent } : {}) })
+    const d = draftStore.all().find((x) => !x.home && !x.dm && !x.text.trim() && !x.intent && !x.itemId && x.thread && (x.agent || undefined) === agent) ?? draftStore.create({ thread: true, ...(agent ? { agent } : {}) })
     navigate(draftRoute(d.id))
   }, [owner, navigate])
   newFromKeyRef.current = team ? newThread : newSession

@@ -29,6 +29,8 @@ export type Draft = {
   continueIn?: string
   /** `job` = "New job": a chat with Junior that sets one up, its first message prefixed "New job:"; `goal` = the same for a goal ("New goal:") */
   intent?: 'job' | 'goal'
+  /** a thread started from + in an agent's band: titled "New thread" until its first message names it */
+  thread?: true
   /** the chat agent the session will talk as (`junior:reviewer`, core/junior/agents.ts); absent = plain Junior */
   agent?: string
   /** the Junior page's own box: never a tab, never listed, never reused by New chat */
@@ -59,6 +61,13 @@ function persist() {
   }
 }
 
+/** Thread drafts used to carry "New thread" as their label, which then named the session. */
+function fromStored(d: Draft): Draft {
+  if (d.label !== 'New thread' || d.itemId) return d
+  const { label: _, ...rest } = d
+  return { ...rest, thread: true }
+}
+
 function load(workspaceId: string): readonly Draft[] {
   try {
     const raw = localStorage.getItem(key(workspaceId))
@@ -67,7 +76,7 @@ function load(workspaceId: string): readonly Draft[] {
       ? parsed.filter(
           (d): d is Draft =>
             typeof d === 'object' && d !== null && typeof (d as Draft).id === 'string' && typeof (d as Draft).text === 'string',
-        )
+        ).map(fromStored)
       : []
   } catch {
     return []
@@ -116,7 +125,7 @@ export const draftStore = {
 
   /** An untouched draft: `n` focuses it rather than stacking blank tabs. */
   findEmpty(): Draft | undefined {
-    return drafts.find((d) => !d.home && !d.dm && !d.text.trim() && !d.label && !d.intent)
+    return drafts.find((d) => !d.home && !d.dm && !d.text.trim() && !d.label && !d.intent && !d.thread)
   },
 
   /** An untouched "New job" draft, reused like an empty session draft. */
@@ -133,7 +142,7 @@ export function useDrafts(): readonly Draft[] {
 export function draftTitle(d: Draft): string {
   if (d.label) return d.label
   const line = d.text.trim().split('\n')[0]
-  return line ? (line.length > 48 ? line.slice(0, 47) + '…' : line) : d.intent === 'job' ? 'New job' : d.intent === 'goal' ? 'New goal' : 'New chat'
+  return line ? (line.length > 48 ? line.slice(0, 47) + '…' : line) : d.thread ? 'New thread' : d.intent === 'job' ? 'New job' : d.intent === 'goal' ? 'New goal' : 'New chat'
 }
 
 /** The Junior page's box: one draft of its own, made the first time the page needs it. */
