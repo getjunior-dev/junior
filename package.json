@@ -2,6 +2,7 @@
   "name": "usejunior",
   "version": "0.10.1",
   "type": "module",
+  "license": "MIT",
   "description": "Ranked work inbox for engineers — every item arrives with its action drafted, dispatch straight into your local Claude Code",
   "repository": {
     "type": "git",
