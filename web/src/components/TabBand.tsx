@@ -3,14 +3,12 @@ import {
   ArrowRight,
   Bot,
   CalendarClock,
-  ChevronRight,
+  ChevronDown,
   CircleDot,
   FileDiff,
   FileText,
-  Folder,
   FolderOpen,
   GitBranch,
-  Home,
   MessageSquare,
   PanelLeftOpen,
   PenLine,
@@ -34,26 +32,15 @@ import {
   type MouseEvent,
   type RefObject,
 } from 'react'
-import type { Project, ProjectsResponse } from '../../../shared/protocol.js'
 import {
   CtxMenu,
   CtxMenuContent,
   CtxMenuItem,
   CtxMenuSeparator,
   CtxMenuTrigger,
-  Menu,
-  MenuContent,
-  MenuItem,
-  MenuSeparator,
-  MenuSub,
-  MenuSubContent,
-  MenuSubTrigger,
-  MenuTrigger,
 } from '../ui/Menu.js'
+import { Menu, MenuContent, MenuItem, MenuTrigger } from '../ui/Menu.js'
 import { MOD_LABEL } from '../keys.js'
-import { defaultProjectOf } from './ProjectPicker.js'
-
-const homely = (p: string) => p.replace(/^\/(?:Users|home)\/[^/]+/, '~')
 
 /**
  * What a tab holds. Every kind but `place` is a *thing*, with a tab of its
@@ -97,11 +84,30 @@ export type OpenTab = {
   icon?: ComponentType<LucideProps>
 }
 
+/** A thread in the band's menu: its title and whose turn it is. */
+export type BandThread = { id: string; title: string; state: 'you' | 'working' | 'stopped' | 'ready' }
+
+/**
+ * The agent the band belongs to (team layout): its DM is the first tab and
+ * carries its name, + starts a thread with it, and the menu lists its threads.
+ */
+export type BandOwner = {
+  name: string
+  /** live threads, then the older ones */
+  live: readonly BandThread[]
+  earlier: readonly BandThread[]
+  onOpenThread: (id: string) => void
+}
+
+const THREAD_WORDS: Record<BandThread['state'], string> = { you: 'Needs you', working: 'Working', stopped: 'Stopped', ready: '' }
+
 type Props = {
   /** the tab in front's key */
   activeKey: string
-  /** Junior's DM: always first, icon-only, never closed */
+  /** The DM that leads the band: always first, never closed. Junior's, or the owner's in the team layout. */
   junior: OpenTab
+  /** Team layout: the band is one agent's. Absent = the classic band, Junior's face alone and "New". */
+  owner?: BandOwner
   tabs: readonly OpenTab[]
   /** The one place in the preview tab, if any: it outlives navigating away. */
   preview?: OpenTab | null
@@ -247,6 +253,7 @@ function useTabDrag(tabs: readonly OpenTab[], onReorder: (key: string, before: s
 export function TabBand({
   activeKey,
   junior,
+  owner,
   tabs,
   preview,
   onShowPanel,
@@ -275,7 +282,7 @@ export function TabBand({
         </button>
       )}
 
-      <JuniorTab tab={junior} active={activeKey === junior.key} onSelect={onSelect} />
+      <JuniorTab tab={junior} active={activeKey === junior.key} labelled={!!owner} onSelect={onSelect} />
 
       <div className="strip" ref={strip} data-fade={fade} role="presentation" onDragLeave={onStripDragLeave}>
         {tabs.map((t, i) => (
@@ -309,7 +316,8 @@ export function TabBand({
         )}
       </div>
 
-      <NewTabMenu onNew={onNew} onNewTerminal={onNewTerminal} terminalCwd={terminalCwd} />
+      <NewTabMenu onNew={onNew} owner={owner?.name} />
+      {owner && <ThreadsMenu owner={owner} activeKey={activeKey} />}
     </div>
   )
 }
@@ -318,18 +326,19 @@ export function TabBand({
  * Junior's DM: the J face alone, outside the scroller so it never scrolls
  * away, no close. Its dot says Junior is working; orange says it waits on you.
  */
-function JuniorTab({ tab, active, onSelect }: { tab: OpenTab; active: boolean; onSelect: (key: string) => void }) {
+function JuniorTab({ tab, active, labelled, onSelect }: { tab: OpenTab; active: boolean; labelled: boolean; onSelect: (key: string) => void }) {
   return (
     <button
       type="button"
       role="tab"
       aria-selected={active}
       aria-label={tab.waiting ? `${tab.title}, waiting on you: ${tab.waiting}` : tab.title}
-      className={`tab juniorTab${active ? ' active' : ''}`}
+      className={`tab juniorTab${labelled ? ' labelled' : ''}${active ? ' active' : ''}`}
       title={tab.waiting ? `${tab.title} — waiting on you: ${tab.waiting}` : tab.title}
       onClick={() => onSelect(tab.key)}
     >
-      <JuniorFace size={16} motion="still" decorative />
+      <JuniorFace size={16} motion="still" colour={tab.face} decorative />
+      {labelled && <span className="t">{tab.title}</span>}
       {tab.waiting ? (
         <span className="pdot needs" aria-hidden="true" />
       ) : (
@@ -482,71 +491,51 @@ function Tab({
   )
 }
 
-/** The "+": a new session, or a new terminal, here, or in a project folder. */
-function NewTabMenu({ onNew, onNewTerminal, terminalCwd }: Pick<Props, 'onNew' | 'onNewTerminal' | 'terminalCwd'>) {
-  const [open, setOpen] = useState(false)
-  const [projects, setProjects] = useState<Project[]>([])
-
-  useEffect(() => {
-    if (!open) return
-    void fetch('/api/projects')
-      .then((r) => r.json() as Promise<ProjectsResponse>)
-      .then((b) => {
-        if (b.ok) setProjects(b.projects)
-      })
-      .catch(() => {})
-  }, [open])
-
+/**
+ * The "+": a new chat, straight away. In an agent's band it is a new thread with that agent, with no
+ * detour through its DM. (The terminal choices are off for now; ^` still opens a scratch terminal.)
+ */
+function NewTabMenu({ onNew, owner }: Pick<Props, 'onNew'> & { owner?: string }) {
+  if (owner)
+    return (
+      <button type="button" className="add" title={`New thread with ${owner} (n)`} aria-label={`New thread with ${owner}`} onClick={() => onNew()}>
+        <Plus size={14} aria-hidden="true" />
+      </button>
+    )
   return (
-    <Menu open={open} onOpenChange={setOpen}>
+    <button type="button" className="add labelled" title="New chat (n)" onClick={() => onNew()}>
+      <Plus size={14} aria-hidden="true" />
+      <span>New</span>
+    </button>
+  )
+}
+
+/** Every thread the band's agent has: the live ones, then the older ones. Closing a tab never loses a thread; it is still here. */
+function ThreadsMenu({ owner, activeKey }: { owner: BandOwner; activeKey: string }) {
+  const row = (t: BandThread) => (
+    <MenuItem key={t.id} className={`bandThread${t.id === activeKey ? ' on' : ''}`} onSelect={() => owner.onOpenThread(t.id)}>
+      <MessageSquare size={13} aria-hidden="true" />
+      <span className="name">{t.title}</span>
+      {THREAD_WORDS[t.state] && <span className={`bandState ${t.state}`}>{THREAD_WORDS[t.state]}</span>}
+    </MenuItem>
+  )
+  return (
+    <Menu>
       <MenuTrigger asChild>
-        <button type="button" className="add labelled" title="New tab — chat or terminal">
-          <Plus size={14} aria-hidden="true" />
-          <span>New</span>
+        <button type="button" className="add threadsBtn" title={`${owner.name}'s threads`} aria-label={`${owner.name}'s threads`}>
+          <ChevronDown size={14} aria-hidden="true" />
         </button>
       </MenuTrigger>
-      <MenuContent align="start" className="wide">
-        <MenuItem onSelect={onNew}>
-          <MessageSquare size={14} aria-hidden="true" />
-          <span className="text">
-            <span className="name">New chat</span>
-            <span className="desc">Pick the project in the composer</span>
-          </span>
-          <span className="val">n</span>
-        </MenuItem>
-        <MenuItem onSelect={() => onNewTerminal(terminalCwd)}>
-          <Terminal size={14} aria-hidden="true" />
-          <span className="text">
-            <span className="name">New terminal</span>
-            {/* No folder in view: the server opens it in the default project. */}
-            <span className="desc">{homely(terminalCwd ?? defaultProjectOf(projects)?.path ?? '~')}</span>
-          </span>
-        </MenuItem>
-        <MenuSeparator />
-        <MenuSub>
-          <MenuSubTrigger className="nav">
-            <Folder size={14} aria-hidden="true" />
-            <span className="name">Terminal in…</span>
-            <ChevronRight size={14} aria-hidden="true" />
-          </MenuSubTrigger>
-          <MenuSubContent className="wide">
-            {projects.map((p) => (
-              <MenuItem key={p.id} onSelect={() => onNewTerminal(p.path)}>
-                <Folder size={14} aria-hidden="true" />
-                <span className="text">
-                  <span className="name">{p.name}</span>
-                  <span className="desc">{homely(p.path)}</span>
-                </span>
-              </MenuItem>
-            ))}
-            {projects.length > 0 && <MenuSeparator />}
-            <MenuItem onSelect={() => onNewTerminal('~')}>
-              <Home size={14} aria-hidden="true" />
-              Home folder
-            </MenuItem>
-          </MenuSubContent>
-        </MenuSub>
+      <MenuContent className="bandThreads" align="start">
+        {owner.live.length + owner.earlier.length === 0 && <div className="bandThreadsEmpty">No threads with {owner.name} yet.</div>}
+        {owner.live.length > 0 && <div className="bandThreadsLabel">Recent</div>}
+        {owner.live.map(row)}
+        {owner.earlier.length > 0 && <div className="bandThreadsLabel">Earlier</div>}
+        {owner.earlier.slice(0, EARLIER_SHOWN).map(row)}
       </MenuContent>
     </Menu>
   )
 }
+
+/** Older threads the menu lists; the rest are a search away (⌘K). */
+const EARLIER_SHOWN = 12

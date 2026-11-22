@@ -2,14 +2,14 @@
  * The team sidebar (.docs/redesign-b2-plan.md, .docs/sidebar-concepts.html 01):
  * everything you talk to is a conversation row. Search and the four places on
  * top, then Junior pinned first, speaking one line (core/junior/say.ts), then
- * the open threads, then the agents with their latest line. Quiet agents fold
- * into one row. Settings at the bottom.
+ * the open threads, then every agent with its latest line, and a row to add a
+ * teammate. Usage and Settings at the bottom.
  */
-import { CalendarClock, Clock, FileText, GitPullRequest, ListChecks, PanelLeft, Plus, Search, Settings } from 'lucide-react'
+import { CalendarClock, ChevronDown, ChevronUp, Clock, FileText, GitPullRequest, ListChecks, PanelLeft, Plus, Search, Settings, Wallet } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import { JUNIOR_DM, dmKey, findDm } from '../../../core/junior/dms.js'
 import { juniorSays, type SayNeed } from '../../../core/junior/say.js'
-import { agentStatus, openThreads, pinnedThreads, waitingThreads, THREADS_SHOWN, type AgentStatus, type Thread } from '../../../core/junior/threads.js'
+import { agentStatus, agentThreads, openThreads, pinnedThreads, waitingThreads, THREADS_SHOWN, type AgentStatus, type Thread } from '../../../core/junior/threads.js'
 import type { SessionSummary } from '../../../shared/protocol.js'
 import { useChatAgents } from '../chatAgents.js'
 import { useInbox } from '../inboxStore.js'
@@ -18,12 +18,13 @@ import { markThreadSeen, useThreadSeen } from '../threadSeen.js'
 import { isWorking } from '../sessionModes.js'
 import { setSidebarCollapsed } from '../layout.js'
 import { JuniorFace } from './JuniorFace.js'
+import { Dots, wash } from '../ui/Dots.js'
 import { ThreadPinMenu } from './PinThread.js'
 import { STATE_WORDS } from './ThreadCards.js'
 import { relTime } from '../itemUi.js'
 import { MOD_LABEL } from '../keys.js'
 
-export type SidebarPlace = 'junior' | 'tasks' | 'prs' | 'artifacts' | 'jobs' | 'settings' | { agent: string } | { thread: string } | null
+export type SidebarPlace = 'junior' | 'tasks' | 'prs' | 'artifacts' | 'jobs' | 'usage' | 'settings' | { agent: string } | { thread: string } | null
 
 type Props = {
   sessions: readonly SessionSummary[]
@@ -31,6 +32,10 @@ type Props = {
   pendingSends: number
   /** what is in front, to mark it */
   active: SidebarPlace
+  /** the agent the tab band belongs to (its DM key): its threads show under its row */
+  owner: string
+  /** phone, status and help, when the top bar leaves them to the sidebar's foot */
+  system?: ReactNode
   taskCount: number
   prCount: number
   onJunior: () => void
@@ -40,6 +45,7 @@ type Props = {
   onNewAgent: () => void
   /** the command palette (⌘K) */
   onSearch: () => void
+  onUsage: () => void
   onSettings: () => void
 }
 
@@ -95,7 +101,6 @@ export function TeamSidebar(p: Props) {
     return () => clearInterval(t)
   }, [])
   const [showAll, setShowAll] = useState(false)
-  const [allAgents, setAllAgents] = useState(false)
 
   const labelOf = useMemo(() => {
     const byName = new Map(agents.map((a) => [a.name, a]))
@@ -147,28 +152,27 @@ export function TeamSidebar(p: Props) {
     return { ...juniorSays({ you, needs, stuck, working, ready, handedOff, firstOpenToday: firstOpen, now }), needs: needs.length }
   }, [threads, waiting, day, p.sessions, p.pendingSends, inbox.alerts, labelOf, you, handedOff, firstOpen, now, wasSeen])
 
-  // Agents as conversations: busy ones first, then the ones you talked to lately, newest first. The rest fold into one row.
+  // Agents as conversations, every one of them: busy ones first, then the ones you talked to lately, newest first.
   const agentRows = useMemo(() => {
     const rank = { you: 0, working: 1, idle: 2 } as const
     const rows = agents.map((a, i) => {
       const dm = findDm(p.sessions, dmKey(a.name))
       const st = agentStatus(a.name, p.sessions, a.description)
       const state: AgentState = st.state === 'you' || dm?.waiting ? 'you' : st.state
-      return { a, i, st, dm, state, recent: !!dm?.lastLine && now - dm.updatedAt < RECENT_MS }
+      return { a, i, st, dm, state, threads: agentThreads(p.sessions, a.name, needing, now).live }
     })
     rows.sort((x, y) => rank[x.state] - rank[y.state] || (y.dm?.updatedAt ?? 0) - (x.dm?.updatedAt ?? 0) || x.i - y.i)
     return rows
-  }, [agents, p.sessions, now])
+  }, [agents, p.sessions, needing, now])
+  const [folds, setFold] = useAgentFolds()
   const isActive = (place: SidebarPlace) => JSON.stringify(place) === JSON.stringify(p.active)
-  // Busy, recent and open agents keep their rows, and never fewer than AGENTS_SHOWN: the list is never just the fold.
-  const shownAgents = agentRows.filter((r, i) => allAgents || i < AGENTS_SHOWN || r.state !== 'idle' || r.recent || isActive({ agent: r.a.name }))
-  const folded = agentRows.filter((r) => !shownAgents.includes(r))
   const shownThreads = showAll ? waitingRows : waitingRows.slice(0, THREADS_SHOWN)
   const juniorDm = findDm(p.sessions, JUNIOR_DM)
   const juniorBusy = !!juniorDm && isWorking(juniorDm)
 
   return (
-    <nav className="teamSide" aria-label="Junior and the team">
+    <nav className="teamSide tsDotted" aria-label="Junior and the team">
+      <Dots className="tsDots" sampler={WASH} inks={DOT_INKS} />
       <button type="button" className="tsFind" onClick={p.onSearch}>
         <Search size={14} aria-hidden="true" />
         <span className="tsGrow">Search or jump to</span>
@@ -255,7 +259,7 @@ export function TeamSidebar(p: Props) {
             <Plus size={14} aria-hidden="true" />
           </button>
         </div>
-        {shownAgents.map((r) => (
+        {agentRows.map((r) => (
           <AgentRow
             key={r.a.name}
             label={r.a.label}
@@ -266,26 +270,33 @@ export function TeamSidebar(p: Props) {
             dm={r.dm}
             active={isActive({ agent: r.a.name })}
             onOpen={() => p.onAgent(r.a.name)}
+            threads={r.threads}
+            // The band's agent shows its threads; any other stays as you left it.
+            open={folds[r.a.name] ?? p.owner === r.a.name}
+            onToggle={(open) => setFold(r.a.name, open)}
+            activeThread={activeThread}
+            onThread={p.onThread}
           />
         ))}
-        {folded.length > 0 && (
-          <button type="button" className="tsThread tsAg tsFolded" title={`Show ${folded.map((r) => r.a.label).join(', ')}`} onClick={() => setAllAgents(true)}>
-            <JuniorFace size={22} motion="still" mood="hello" colour={folded[0].a.colour ?? undefined} decorative />
-            <span className="tsTitle">{foldedNames(folded.map((r) => r.a.label))}</span>
-          </button>
-        )}
-        {allAgents && agentRows.length > AGENTS_SHOWN && agentRows.some((r) => r.state === 'idle' && !r.recent) && (
-          <button type="button" className="tsMore" onClick={() => setAllAgents(false)}>
-            Show fewer
-          </button>
-        )}
+        {/* A conversation, not a form: Junior asks what the teammate is for and writes its file. */}
+        <button type="button" className="tsThread tsAddAg" title={`Ask ${persona.name} for a new teammate`} onClick={p.onNewAgent}>
+          <span className="tsAddFace" aria-hidden="true">
+            <Plus size={13} />
+          </span>
+          <span className="tsTitle">Add a teammate</span>
+        </button>
       </div>
 
       <div className="tsFoot">
+        <button type="button" className={`tsSettings${isActive('usage') ? ' on' : ''}`} aria-current={isActive('usage') ? 'page' : undefined} onClick={p.onUsage}>
+          <Wallet size={16} aria-hidden="true" />
+          <span>Usage</span>
+        </button>
         <button type="button" className={`tsSettings${isActive('settings') ? ' on' : ''}`} aria-current={isActive('settings') ? 'page' : undefined} onClick={p.onSettings}>
           <Settings size={16} aria-hidden="true" />
           <span>Settings</span>
         </button>
+        {p.system && <span className="tsSys">{p.system}</span>}
       </div>
     </nav>
   )
@@ -293,17 +304,11 @@ export function TeamSidebar(p: Props) {
 
 type AgentState = 'you' | 'working' | 'idle'
 
-/** Agents always shown before the fold. */
-const AGENTS_SHOWN = 3
-/** An agent you talked to within this long keeps its own row; older quiet ones fold. */
-const RECENT_MS = 3 * 24 * 60 * 60 * 1000
+/** The dots behind the whole sidebar: faint at the top, gathering toward the bottom. One picture, drawn once. */
+const WASH = wash(4)
+const DOT_INKS = ['--dot-wash-top', '--dot-wash-bottom']
 
 const ago = (ms: number) => (Date.now() - ms < 45_000 ? 'now' : relTime(ms))
-
-/** "Brief · Explainer · Elon", or "Brief · Explainer · +3" past three. */
-function foldedNames(names: string[]): string {
-  return names.length <= 3 ? names.join(' · ') : `${names.slice(0, 2).join(' · ')} · +${names.length - 2}`
-}
 
 function Typing() {
   return (
@@ -330,13 +335,31 @@ function Place({ on, icon, label, title, count, onClick }: { on: boolean; icon: 
  * One agent: a small face and its name, one line like a thread. Working shows typing dots; waiting on you,
  * the orange dot. Its latest line rides in the tooltip. Hovering wakes the face.
  */
-function AgentRow(r: { label: string; description: string; colour?: string; st: AgentStatus; state: AgentState; dm?: SessionSummary; active: boolean; onOpen: () => void }) {
+function AgentRow(r: {
+  label: string
+  description: string
+  colour?: string
+  st: AgentStatus
+  state: AgentState
+  dm?: SessionSummary
+  active: boolean
+  onOpen: () => void
+  /** its live threads, listed under it while open */
+  threads: readonly Thread[]
+  open: boolean
+  onToggle: (open: boolean) => void
+  activeThread: string | null
+  onThread: (id: string) => void
+}) {
   const [hover, setHover] = useState(false)
   const said = r.state === 'working' ? r.st.line : (r.dm?.lastLine ?? (r.state === 'you' ? r.st.line : r.description))
+  const some = r.threads.length > 0
+  const listId = `ts-threads-${r.label.replace(/\W+/g, '-')}`
   return (
+    <div className={`tsAgWrap${some ? ' has' : ''}`}>
     <button
       type="button"
-      className={`tsThread tsAg${r.active ? ' on' : ''}`}
+      className={`tsThread tsAg${r.state !== 'idle' ? ' says' : ''}${r.active ? ' on' : ''}`}
       aria-current={r.active ? 'page' : undefined}
       title={`${r.label}: ${said}`}
       onClick={r.onOpen}
@@ -344,11 +367,72 @@ function AgentRow(r: { label: string; description: string; colour?: string; st: 
       onPointerLeave={() => setHover(false)}
     >
       <JuniorFace size={22} motion={hover ? 'follow' : 'still'} mood={hover ? 'done' : r.state === 'you' ? 'needs' : r.state === 'working' ? 'working' : 'hello'} colour={r.colour} decorative />
-      <span className="tsTitle">{r.label}</span>
+      <span className="tsAgT">
+        <span className="tsTitle">{r.label}</span>
+        {r.state !== 'idle' && <span className={`tsDoing${r.state === 'you' ? ' you' : ''}`}>{r.st.line}</span>}
+      </span>
       {r.state === 'working' && <Typing />}
       {r.state === 'you' && <span className="tsYou" aria-label="needs you" />}
     </button>
+    {some && (
+      <button
+        type="button"
+        className="tsFold"
+        aria-expanded={r.open}
+        aria-controls={listId}
+        title={r.open ? `Hide ${r.label}'s threads` : `Show ${r.label}'s threads`}
+        aria-label={r.open ? `Hide ${r.label}'s threads` : `Show ${r.label}'s ${r.threads.length} thread${r.threads.length === 1 ? '' : 's'}`}
+        onClick={() => r.onToggle(!r.open)}
+      >
+        {!r.open && <span>{r.threads.length}</span>}
+        {r.open ? <ChevronUp size={12} aria-hidden="true" /> : <ChevronDown size={12} aria-hidden="true" />}
+      </button>
+    )}
+    {some && r.open && (
+      <div className="tsNest" id={listId} role="group" aria-label={`${r.label}'s threads`}>
+        {r.threads.map((t) => (
+          <ThreadPinMenu key={t.id} id={t.id} pinned={false}>
+            <button
+              type="button"
+              className={`tsThread tsNested${r.activeThread === t.id ? ' on' : ''}`}
+              aria-current={r.activeThread === t.id ? 'page' : undefined}
+              title={`${t.title} · ${STATE_WORDS[t.state]}`}
+              onClick={() => r.onThread(t.id)}
+            >
+              <span className="tsTitle">{t.title}</span>
+              {t.state === 'you' ? <span className="tsYou" aria-label="needs you" /> : t.state !== 'ready' && <span className={`tsTag ${t.state}`}>{STATE_WORDS[t.state]}</span>}
+            </button>
+          </ThreadPinMenu>
+        ))}
+      </div>
+    )}
+    </div>
   )
+}
+
+const FOLDS_KEY = 'junior.sidebar.agentFolds'
+
+/** Which agents you opened or shut by hand, by name; one you never touched follows the band. Per browser. */
+function useAgentFolds(): [Record<string, boolean>, (agent: string, open: boolean) => void] {
+  const [folds, setFolds] = useState<Record<string, boolean>>(() => {
+    try {
+      const parsed: unknown = JSON.parse(localStorage.getItem(FOLDS_KEY) ?? '{}')
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? Object.fromEntries(Object.entries(parsed).filter(([, v]) => typeof v === 'boolean')) as Record<string, boolean> : {}
+    } catch {
+      return {}
+    }
+  })
+  const set = (agent: string, open: boolean) =>
+    setFolds((f) => {
+      const next = { ...f, [agent]: open }
+      try {
+        localStorage.setItem(FOLDS_KEY, JSON.stringify(next))
+      } catch {
+        // storage blocked: the fold still holds for this page load
+      }
+      return next
+    })
+  return [folds, set]
 }
 
 type RowProps = { t: Thread; agentLabel: string; colour?: string; active: boolean; onOpen: () => void } & Omit<ComponentProps<'button'>, 'onClick'>
@@ -430,7 +514,10 @@ export function TeamRail(p: {
   prCount: number
   onJunior: () => void
   onPlace: (place: 'tasks' | 'prs' | 'artifacts' | 'jobs') => void
+  onUsage: () => void
   onSettings: () => void
+  /** phone, status and help, when the top bar leaves them to the rail's foot */
+  system?: ReactNode
 }) {
   const persona = usePersona()
   const [hover, setHover] = useState(false)
@@ -443,7 +530,8 @@ export function TeamRail(p: {
     </button>
   )
   return (
-    <nav className="sideRail" aria-label="Junior and the places">
+    <nav className="sideRail tsDotted" aria-label="Junior and the places">
+      <Dots className="tsDots" sampler={WASH} inks={DOT_INKS} />
       <button
         type="button"
         className={`trItem trJunior${on('junior') ? ' on' : ''}`}
@@ -462,10 +550,14 @@ export function TeamRail(p: {
       {place('artifacts', <FileText size={18} aria-hidden="true" />, 'Artifacts', 'Artifacts')}
       {place('jobs', <CalendarClock size={18} aria-hidden="true" />, 'Jobs', 'Jobs')}
       <span className="tsGrow" />
+      {p.system && <span className="tsSys col">{p.system}</span>}
       <button type="button" className="trItem" title={`Show the sidebar (${MOD_LABEL}\\)`} aria-label="Show the sidebar" onClick={() => setSidebarCollapsed(false)}>
         <PanelLeft size={18} aria-hidden="true" />
       </button>
-      <button type="button" className="trItem" title="Settings" aria-label="Settings" onClick={p.onSettings}>
+      <button type="button" className={`trItem${on('usage') ? ' on' : ''}`} aria-current={on('usage') ? 'page' : undefined} title="Usage" aria-label="Usage" onClick={p.onUsage}>
+        <Wallet size={18} aria-hidden="true" />
+      </button>
+      <button type="button" className={`trItem${on('settings') ? ' on' : ''}`} aria-current={on('settings') ? 'page' : undefined} title="Settings" aria-label="Settings" onClick={p.onSettings}>
         <Settings size={18} aria-hidden="true" />
       </button>
     </nav>

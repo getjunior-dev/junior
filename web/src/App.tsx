@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect, useRef, useCallback, type CSSProperties } from 'react'
+import { useState, useMemo, useEffect, useLayoutEffect, useRef, useCallback, type CSSProperties } from 'react'
+import { createPortal } from 'react-dom'
 import { SessionAgentScope, useChatAgents } from './chatAgents.js'
 import { useLogUnread } from './juniorLog.js'
 import type { TerminalSummary, WorkflowAgent, WorkflowRun } from '../../shared/protocol.js'
@@ -23,11 +24,12 @@ import { ItemPage } from './components/ItemPage.js'
 import { NewSessionComposer } from './components/NewSessionComposer.js'
 import { type RailSection, Rail } from './components/Rail.js'
 import { SettingsPage } from './components/SettingsPage.js'
+import { UsagePage } from './components/UsagePage.js'
 import { type SystemTab, SystemModal } from './components/SystemModal.js'
-import { type OpenTab, TabBand } from './components/TabBand.js'
+import { type BandOwner, type OpenTab, TabBand } from './components/TabBand.js'
 import { useDrafts, draftStore, draftTitle } from './drafts.js'
 import { TerminalPage } from './components/TerminalPage.js'
-import { TopBar } from './components/TopBar.js'
+import { SystemIcons, TOP_BAND_SLOT, TopBar } from './components/TopBar.js'
 import { UpdateBar } from './components/UpdateBar.js'
 import { desktopTabs, isDesktop } from './desktop.js'
 import { Transcript } from './components/Transcript.js'
@@ -60,7 +62,7 @@ import { useIsMobile } from './useMobile.js'
 import { useOpenTabs, useLastRoutes, projectColor } from './tabs.js'
 import { AppPanel } from './app/AppPanel.js'
 import { ChatHeader } from './app/ChatHeader.js'
-import { JUNIOR_TAB, MOBILE_SHEETS, PLACE_ICON, PLACE_LABEL, SHEET_LABEL, isDocKey, placeOfKey, routeOfKey, sectionOf, tabKeyOf } from './app/tabs.js'
+import { JUNIOR_TAB, MOBILE_SHEETS, PLACE_ICON, PLACE_LABEL, SHEET_LABEL, draftRoute, isDocKey, placeOfKey, routeOfKey, sectionOf, tabKeyOf } from './app/tabs.js'
 import { useDispatchers } from './app/useDispatchers.js'
 import { useDocumentTabs } from './app/useDocumentTabs.js'
 import { useGlobalHotkeys } from './app/useGlobalHotkeys.js'
@@ -75,7 +77,8 @@ import { AgentDmStart } from './components/AgentDmStart.js'
 import { ChatSide } from './components/ChatSide.js'
 import { useChatSide } from './chatSide.js'
 import { composerDrafts } from './composerDrafts.js'
-import { JUNIOR_DM, findDm } from '../../core/junior/dms.js'
+import { JUNIOR_DM, dmAgent, dmKey, findDm } from '../../core/junior/dms.js'
+import { agentThreads } from '../../core/junior/threads.js'
 import { TeamRail, TeamSidebar, type SidebarPlace } from './components/TeamSidebar.js'
 import { ThreadSheet } from './components/ThreadSheet.js'
 import { ThreadOpenContext } from './components/ThreadCards.js'
@@ -88,6 +91,10 @@ import { needsYouCount } from '../../core/work/needs-you.js'
 
 /** A work item that is a pull request: its tab lights PRs in the sidebar, not Tasks. */
 const PR_REASONS = new Set(['your-pr', 'review-requested'])
+/** The band's menu reads a thread's own state; the sidebar adds what the day's needs point at. */
+const NO_NEEDS: ReadonlySet<string> = new Set()
+/** A thread you start from an agent's band, before its first message names it. */
+const NEW_THREAD = 'New thread'
 
 /** A place's tab: its own name and mark. */
 function placeTab(key: string): OpenTab | null {
@@ -391,6 +398,29 @@ export function App() {
   /** Where Junior's tab goes: its DM (home in the team layout). */
   const juniorRoute = routeOfKey(JUNIOR_TAB, team)
 
+  // Team layout: the band belongs to one agent (its DM key). Its DM leads, its threads are the
+  // tabs, + starts a thread with it. A chat, a thread or a draft names its agent; a place, an
+  // item or a terminal names none, so the band stays with the agent you were last with.
+  const routeOwner =
+    route.page === 'junior' && !route.tab
+      ? JUNIOR_DM
+      : route.page === 'agents'
+        ? (route.name ?? JUNIOR_DM)
+        : route.page === 'session'
+          ? (() => {
+              const s = sessions.find((x) => x.id === route.id)
+              return s ? dmKey(s.agent) : null
+            })()
+          : route.page === 'draft'
+            ? (currentDraft ? dmKey(currentDraft.agent) : null)
+            : null
+  const lastOwner = useRef(JUNIOR_DM)
+  if (routeOwner) lastOwner.current = routeOwner
+  const owner = team ? lastOwner.current : JUNIOR_DM
+  const ownerTabKey = `dm:${owner}`
+  /** Where the band's first tab goes: the owner's DM. */
+  const ownerRoute = routeOfKey(ownerTabKey, team)
+
   // A place's tab goes back to where you were in it: an inbox view, a settings tab.
   const placeHashes = useRef(new Map<string, string>())
   useEffect(() => {
@@ -401,14 +431,22 @@ export function App() {
   // Empty the band. Drafts go with their tabs: that is the only place they
   // live, and with nothing left open, Junior's page is where you land.
   const closeAllOpenTabs = useCallback(() => {
-    for (const key of [...tabs, ...(preview ? [preview] : [])]) {
+    // In an agent's band, "all" is the tabs it shows: another agent's threads stay open in theirs.
+    const keys = team ? shownNow.current.filter((k) => k !== ownerTabKey) : [...tabs, ...(preview ? [preview] : [])]
+    for (const key of keys) {
       if (key.startsWith('draft:')) draftStore.remove(key.slice(6))
     }
-    closeAllTabs()
-    navigate(juniorRoute)
-  }, [tabs, preview, closeAllTabs, navigate, juniorRoute])
+    if (team) for (const key of keys) closeTab(key)
+    else closeAllTabs()
+    navigate(team ? ownerRoute : juniorRoute)
+  }, [team, tabs, preview, closeAllTabs, closeTab, navigate, juniorRoute, ownerRoute, ownerTabKey])
+  /** The band's keys as drawn, for the callbacks above that are made before the band is. */
+  const shownNow = useRef<string[]>([])
 
-  useGlobalHotkeys({ route, navigate, newSession, newTerminal, terminalCwd, goTo, currentId, panelSize, setHelpOpen, setPaletteOpen, setFrictionOpen, setComposeSignal })
+  // `n`: a new thread with the band's agent in the team layout, a new chat in the classic one.
+  const newFromKeyRef = useRef(newSession)
+  const newFromKey = useCallback(() => newFromKeyRef.current(), [])
+  useGlobalHotkeys({ route, navigate, newSession: newFromKey, newTerminal, terminalCwd, goTo, currentId, panelSize, setHelpOpen, setPaletteOpen, setFrictionOpen, setComposeSignal })
 
   const { create, addJob, refineJob, dispatch, dispatchById, continueInMain } = useDispatchers({ navigate, pendingDraft, setCreateError, inbox, checkouts })
 
@@ -437,6 +475,8 @@ export function App() {
                     ? 'jobs'
                     : route.page === 'settings'
                       ? 'settings'
+                      : route.page === 'usage'
+                        ? 'usage'
                       : null
   // ⌘\ hides and shows the team sidebar.
   useEffect(() => {
@@ -485,8 +525,11 @@ export function App() {
       tabs.flatMap((key): OpenTab[] => {
         if (key.startsWith('draft:')) {
           const d = drafts.find((x) => x.id === key.slice(6))
+          if (d && team && dmKey(d.agent) !== owner) return []
           return d ? [{ key, kind: 'draft', title: draftTitle(d), color: 'var(--stone)', running: false }] : []
         }
+        // An agent's DM leads its own band; it is never one more tab in another's.
+        if (team && key.startsWith('dm:')) return []
         if (key.startsWith('term:')) {
           const t: TerminalSummary | undefined = terminals.find((x) => x.id === key.slice(5))
           return t
@@ -500,6 +543,7 @@ export function App() {
           return t ? [t] : []
         }
         const s = sessions.find((x) => x.id === key)
+        if (s && team && dmKey(s.agent) !== owner) return []
         return s
           ? [
               {
@@ -514,7 +558,7 @@ export function App() {
             ]
           : []
       }),
-    [tabs, sessions, terminals, drafts, docTab, worktreeTag],
+    [tabs, sessions, terminals, drafts, docTab, worktreeTag, team, owner],
   )
 
   const previewTab = useMemo<OpenTab | null>(() => {
@@ -522,31 +566,45 @@ export function App() {
     return t ? { ...t, preview: true } : null
   }, [preview])
 
-  // Junior's DM: named and lit like any DM tab, never closed.
+  // The DM that leads the band: Junior's, or the owner's in the team layout. Named and lit like any DM tab, never closed.
   const juniorTab = useMemo<OpenTab>(
-    () => docTab(JUNIOR_TAB) ?? { key: JUNIOR_TAB, kind: 'dm', title: persona.name, color: 'var(--stone)', running: false },
-    [docTab, persona.name],
+    () => docTab(ownerTabKey) ?? { key: ownerTabKey, kind: 'dm', title: persona.name, color: 'var(--stone)', running: false },
+    [docTab, ownerTabKey, persona.name],
   )
-  /** Every tab as drawn, Junior's first: ⌘1–9 counts along it. */
+  /** Every tab as drawn, the DM first: ⌘1–9 counts along it. */
   const shownTabs = useMemo(() => [juniorTab, ...openTabs, ...(previewTab ? [previewTab] : [])], [juniorTab, openTabs, previewTab])
+  shownNow.current = shownTabs.map((t) => t.key)
+
+  // The owner's threads, for the band's menu; and + starts one with it, an untouched one reused.
+  const bandOwner = useMemo<BandOwner | undefined>(() => {
+    if (!team) return undefined
+    const { live, earlier } = agentThreads(sessions, dmAgent(owner), NO_NEEDS, Date.now())
+    return { name: juniorTab.title, live, earlier, onOpenThread: (id) => navigate(id) }
+  }, [team, sessions, owner, juniorTab.title, navigate])
+  const newThread = useCallback(() => {
+    const agent = dmAgent(owner)
+    const d = draftStore.all().find((x) => !x.home && !x.dm && !x.text.trim() && !x.intent && !x.itemId && x.label === NEW_THREAD && (x.agent || undefined) === agent) ?? draftStore.create({ label: NEW_THREAD, ...(agent ? { agent } : {}) })
+    navigate(draftRoute(d.id))
+  }, [owner, navigate])
+  newFromKeyRef.current = team ? newThread : newSession
 
   // Closing the tab you are on lands you on its neighbour in the band as
   // drawn, else Junior's. Hidden keys (a dead shell) are never a landing.
   // A terminal tab closing does not kill the shell. That is the panel's menu.
   const closeOpenTab = useCallback(
     (key: string) => {
-      if (key === JUNIOR_TAB) return
+      if (key === JUNIOR_TAB || key === ownerTabKey) return
       if (key === activeTabKey) {
         const shown = shownTabs.map((t) => t.key)
         const i = shown.indexOf(key)
         const next = i === -1 ? undefined : shown[i + 1] ?? shown[i - 1]
-        navigate(next ? routeOfTab(next) : juniorRoute)
+        navigate(next ? routeOfTab(next) : ownerRoute)
       }
       // Closing a draft tab discards the draft. There is nowhere else it lives.
       if (key.startsWith('draft:')) draftStore.remove(key.slice(6))
       closeTab(key)
     },
-    [shownTabs, activeTabKey, navigate, closeTab, routeOfTab, juniorRoute],
+    [shownTabs, activeTabKey, navigate, closeTab, routeOfTab, ownerRoute, ownerTabKey],
   )
 
   // Starting work in the place in the preview tab keeps it: typing, editing, toggling.
@@ -587,6 +645,8 @@ export function App() {
       ? 'Tasks'
       : route.page === 'settings'
         ? 'Settings'
+      : route.page === 'usage'
+        ? 'Usage'
       : shownTabs.find((t) => t.key === activeTabKey)?.title ?? null
   const mobileUp = useMemo((): (() => void) | null => {
     // An open sheet sits over the page: back closes it.
@@ -626,6 +686,35 @@ export function App() {
   // An agent's DM lives on the Agents page, not in the chat list.
   const chatSessions = useMemo(() => sessions.filter((s) => s.kind !== 'brief' && s.kind !== 'goal' && s.kind !== 'dm' && s.teamRun?.role !== 'worker'), [sessions])
   const dmsWaiting = sessions.filter((s) => s.kind === 'dm' && s.waiting).length
+  // The page tabs. In the browser's team layout they ride in the top bar, one row with the workspaces
+  // (TopBar's slot); Junior.app and the classic layout keep them at the top of the page.
+  const bandInBar = team && !isDesktop
+  const [bandSlot, setBandSlot] = useState<HTMLElement | null>(null)
+  useLayoutEffect(() => {
+    setBandSlot(bandInBar ? document.getElementById(TOP_BAND_SLOT) : null)
+  })
+  // With the tabs in the top bar, phone, status and help move to the sidebar's foot.
+  const sideSystem = bandInBar ? (
+    <SystemIcons workspace={activeWorkspace ?? undefined} conn={conn} onOpenSystem={(tab) => setSystem({ open: true, tab })} onOpenSettings={() => openSettings()} onHelp={() => setHelpOpen(true)} noSettings />
+  ) : undefined
+  const tabBand = (
+    <TabBand
+            activeKey={activeTabKey}
+            junior={juniorTab}
+            owner={bandOwner}
+            tabs={openTabs}
+            preview={previewTab}
+            onPin={pin}
+            onShowPanel={!team && panelCollapsed && !isDesktop ? () => (panelStepsAside ? setKeepPanel(true) : panelSize.setCollapsed(false)) : undefined}
+            onSelect={(key) => navigate(routeOfTab(key))}
+            onClose={closeOpenTab}
+            onCloseAll={closeAllOpenTabs}
+            onReorder={moveTab}
+            onNew={team ? newThread : newSession}
+            onNewTerminal={newTerminal}
+            terminalCwd={terminalCwd}
+          />
+  )
   const needsYou = needsYouCount(sessions, pendingActions)
   // Junior.app's other tabs show this workspace's count: tell the host when it moves.
   useEffect(() => desktopTabs?.reportCount(needsYou), [needsYou])
@@ -703,7 +792,9 @@ export function App() {
               prCount={inbox.items.filter((i) => i.reason === 'your-pr' || i.reason === 'review-requested').length}
               onJunior={() => navigate('/junior')}
               onPlace={(place) => navigate(place === 'tasks' ? '/inbox' : `/${place}`)}
+              onUsage={() => navigate('/usage')}
               onSettings={() => openSettings()}
+              system={sideSystem}
             />
           ) : (
             <TeamSidebar
@@ -714,7 +805,8 @@ export function App() {
               prCount={inbox.items.filter((i) => i.reason === 'your-pr' || i.reason === 'review-requested').length}
               onJunior={() => navigate('/junior')}
               onAgent={(name) => navigate(`/agents/${encodeURIComponent(name)}`)}
-              onThread={openThread}
+              onThread={(id) => navigate(id)}
+              owner={owner}
               onPlace={(place) => navigate(place === 'tasks' ? '/inbox' : `/${place}`)}
               onNewAgent={() => {
                 // A conversation, not a form: Junior asks what the agent is for and writes its file.
@@ -723,7 +815,9 @@ export function App() {
                 navigate('/junior')
               }}
               onSearch={() => setPaletteOpen(true)}
+              onUsage={() => navigate('/usage')}
               onSettings={() => openSettings()}
+              system={sideSystem}
             />
           )
         ) : (
@@ -757,28 +851,16 @@ export function App() {
         )}
 
         <div id="main">
-          {!mobile && <TabBand
-            activeKey={activeTabKey}
-            junior={juniorTab}
-            tabs={openTabs}
-            preview={previewTab}
-            onPin={pin}
-            onShowPanel={!team && panelCollapsed && !isDesktop ? () => (panelStepsAside ? setKeepPanel(true) : panelSize.setCollapsed(false)) : undefined}
-            onSelect={(key) => navigate(routeOfTab(key))}
-            onClose={closeOpenTab}
-            onCloseAll={closeAllOpenTabs}
-            onReorder={moveTab}
-            onNew={newSession}
-            onNewTerminal={newTerminal}
-            terminalCwd={terminalCwd}
-          />}
-
+          {!mobile && !bandInBar && tabBand}
+          {bandInBar && bandSlot && createPortal(tabBand, bandSlot)}
           <ThreadOpenContext.Provider value={team ? openThread : null}>
           <div className="content" ref={contentRef}>
             {route.page === 'settings' ? (
               <SettingsPage workspace={activeWorkspace} tab={route.tab} onOpenSystem={(tab) => setSystem({ open: true, tab })} />
             ) : route.page === 'prs' ? (
               <PullRequestsPage onNavigate={navigate} />
+            ) : route.page === 'usage' ? (
+              <UsagePage />
             ) : agentPage ? (
               agentPage === JUNIOR_DM ? (
                 <JuniorAgentPage onNavigate={navigate} />
@@ -890,6 +972,8 @@ export function App() {
                   mobile={mobile}
                   browserOpen={browserOpen}
                   onNavigate={navigate}
+                  // A bar of its own under the header (a team run's, a background agent's) needs the header to stay a bar.
+                  floating={!teamRun && !openAgent && !wf.agentView}
                 />
                 {railOn && teamRun ? (
                   <RunHeader
@@ -1062,6 +1146,7 @@ export function App() {
         initialTab={system.tab}
         conn={conn}
         onClose={() => setSystem((s) => ({ ...s, open: false }))}
+        fromSide={bandInBar}
       />
       <WorkspaceModal mode={wsModal} onClose={() => setWsModal(null)} />
       <DefaultProjectGate workspaceId={workspaceId} suspended={wsModal !== null || !onboarded} onboardingSkipped={onboardingSkipped} />
