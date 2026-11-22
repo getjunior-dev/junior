@@ -28,6 +28,7 @@ import { UsagePage } from './components/UsagePage.js'
 import { type SystemTab, SystemModal } from './components/SystemModal.js'
 import { type BandOwner, type OpenTab, TabBand } from './components/TabBand.js'
 import { useDrafts, draftStore, draftTitle } from './drafts.js'
+import { threadRename } from './threadRename.js'
 import { TerminalPage } from './components/TerminalPage.js'
 import { SystemIcons, TOP_BAND_SLOT, TopBar } from './components/TopBar.js'
 import { UpdateBar } from './components/UpdateBar.js'
@@ -703,6 +704,10 @@ export function App() {
             tabs={openTabs}
             preview={previewTab}
             onPin={pin}
+            onRename={(key) => {
+              navigate(routeOfTab(key))
+              threadRename.start(key)
+            }}
             onShowPanel={!team && panelCollapsed && !isDesktop ? () => (panelStepsAside ? setKeepPanel(true) : panelSize.setCollapsed(false)) : undefined}
             onSelect={(key) => navigate(routeOfTab(key))}
             onClose={closeOpenTab}
@@ -970,6 +975,8 @@ export function App() {
                   mobile={mobile}
                   browserOpen={browserOpen}
                   onNavigate={navigate}
+                  onRename={renameSession}
+                  onDelete={deleteSession}
                   // A bar of its own under the header (a team run's, a background agent's) needs the header to stay a bar.
                   floating={!teamRun && !openAgent && !wf.agentView}
                 />

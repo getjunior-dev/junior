@@ -12,6 +12,7 @@ import {
   MessageSquare,
   PanelLeftOpen,
   PenLine,
+  Pencil,
   Pin,
   Plus,
   Terminal,
@@ -119,6 +120,8 @@ type Props = {
   onCloseAll: () => void
   /** Keep the place in the preview tab: the next place opens beside it. */
   onPin: (key: string) => void
+  /** A thread's tab: Rename opens it and edits the title in its header. */
+  onRename?: (key: string) => void
   /** Drag a pinned tab: move it to sit before `before`'s key, or to the end when `before` is null. */
   onReorder: (key: string, before: string | null) => void
   onNew: () => void
@@ -261,6 +264,7 @@ export function TabBand({
   onClose,
   onCloseAll,
   onPin,
+  onRename,
   onReorder,
   onNew,
   onNewTerminal,
@@ -294,6 +298,7 @@ export function TabBand({
             onClose={onClose}
             onCloseAll={onCloseAll}
             onPin={onPin}
+            onRename={onRename}
             drag={dragBag(t.key, i)}
             reorder={{
               canLeft: i > 0,
@@ -312,6 +317,7 @@ export function TabBand({
             onClose={onClose}
             onCloseAll={onCloseAll}
             onPin={onPin}
+            onRename={onRename}
           />
         )}
       </div>
@@ -391,6 +397,7 @@ function Tab({
   onClose,
   onCloseAll,
   onPin,
+  onRename,
   drag,
   reorder,
 }: {
@@ -400,6 +407,7 @@ function Tab({
   onClose: (key: string) => void
   onCloseAll: () => void
   onPin: (key: string) => void
+  onRename?: (key: string) => void
   /** Present only for pinned tabs: the preview slot and page tab neither drag nor take a drop. */
   drag?: DragBag
   /** Present only for pinned tabs: same reasoning as `drag`, but this is the keyboard/menu route to it. */
@@ -410,6 +418,8 @@ function Tab({
     onClose(tab.key)
   }
   const Icon = tab.icon ?? ICON[tab.kind]
+  // Rename starts once the menu has closed: while open it holds focus, and the title field would never get it.
+  const renaming = useRef(false)
   // A DM's face is its mark; its dot shows only while the agent works.
   const dotted = tab.kind === 'session' || tab.kind === 'terminal' || (tab.kind === 'dm' && tab.running)
   return (
@@ -452,7 +462,14 @@ function Tab({
           {drag?.dropEdge === 'after' && <span className="dropline after" aria-hidden="true" />}
         </button>
       </CtxMenuTrigger>
-      <CtxMenuContent>
+      <CtxMenuContent
+        onCloseAutoFocus={(e) => {
+          if (!renaming.current) return
+          renaming.current = false
+          e.preventDefault()
+          onRename?.(tab.key)
+        }}
+      >
         {tab.preview && (
           <>
             <CtxMenuItem onSelect={() => onPin(tab.key)}>
@@ -461,6 +478,19 @@ function Tab({
                 <span className="name">Keep open</span>
                 <span className="desc">Stop the next page replacing it</span>
               </span>
+            </CtxMenuItem>
+            <CtxMenuSeparator />
+          </>
+        )}
+        {onRename && tab.kind === 'session' && (
+          <>
+            <CtxMenuItem
+              onSelect={() => {
+                renaming.current = true
+              }}
+            >
+              <Pencil size={14} aria-hidden="true" />
+              <span className="name">Rename</span>
             </CtxMenuItem>
             <CtxMenuSeparator />
           </>

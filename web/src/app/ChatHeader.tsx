@@ -3,6 +3,7 @@ import { useMemo, type ReactNode, type RefObject } from 'react'
 import { useScopedAgent } from '../chatAgents.js'
 import { JuniorFace } from '../components/JuniorFace.js'
 import { PinThreadButton } from '../components/PinThread.js'
+import { ThreadTitle } from '../components/ThreadTitle.js'
 import type { SessionStatus, SessionSummary } from '../../../shared/protocol.js'
 import { checkoutOf } from '../checkouts.js'
 import { CheckoutMenu } from '../components/CheckoutMenu.js'
@@ -49,6 +50,9 @@ type HeaderProps = {
   onNavigate: (hash: string) => void
   /** Team layout: the face opens the agent's page instead of its card in the sidebar. */
   onAbout?: () => void
+  /** A thread's ⋯ menu: Rename and Delete go through the app's session actions. */
+  onRename: (sessionId: string, title: string) => void
+  onDelete: (sessionId: string) => void
   /** Desktop: no bar. Who and what it is doing float at the top left of the chat, the tools at the top right, and the transcript runs under them. */
   floating?: boolean
 }
@@ -61,7 +65,7 @@ type HeaderProps = {
  * A phone keeps a slim row with the tools as menus.
  */
 export function ChatHeader(props: HeaderProps) {
-  const { current, chatHeaderRef, currentCheckout, newTerminalIn, agents, openAgent, showAgent, mobile, onNavigate } = props
+  const { current, chatHeaderRef, currentCheckout, newTerminalIn, agents, openAgent, showAgent, mobile, onNavigate, onRename, onDelete } = props
   const shown = shownStatus(current)
   const { colour, name } = useScopedAgent()
   if (!mobile) return <TopBar {...props} />
@@ -70,9 +74,15 @@ export function ChatHeader(props: HeaderProps) {
       <span className="chFace" title={name}>
         <JuniorFace size={18} motion="still" colour={colour} decorative />
       </span>
-      <span id="chatTitle" title={current.title}>
-        {current.title}
-      </span>
+      {current.kind === 'dm' ? (
+        <span id="chatTitle" title={current.title}>
+          {current.title}
+        </span>
+      ) : (
+        <span className="chTitleWrap">
+          <ThreadTitle session={current} onRename={onRename} onDelete={onDelete} className="chatTitleText" />
+        </span>
+      )}
       <StatusDot status={shown.status} title={shown.title} />
       <span className="chIcons">
         {current.kind !== 'dm' && <PinThreadButton id={current.id} pinned={!!current.pinned} size={14} className="ib" />}
@@ -97,7 +107,7 @@ type HeadState = 'needs' | 'working' | 'error' | 'idle'
 const upperFirst = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
 
 /** The desktop bar. */
-function TopBar({ current, chatHeaderRef, currentCheckout, newTerminalIn, agents, browserOpen, onAbout, floating = false }: HeaderProps) {
+function TopBar({ current, chatHeaderRef, currentCheckout, newTerminalIn, agents, browserOpen, onAbout, onRename, onDelete, floating = false }: HeaderProps) {
   const dm = current.kind === 'dm'
   const shown = shownStatus(current)
   const { agent, colour } = useScopedAgent()
@@ -156,12 +166,10 @@ function TopBar({ current, chatHeaderRef, currentCheckout, newTerminalIn, agents
           </span>
         </button>
       ) : (
-        <span className="chWho">
+        <span className="chWho thread">
           <JuniorFace size={20} motion="still" mood={mood} colour={colour} decorative />
           <span className="chNames">
-            <span className="chName" title={current.title}>
-              <b>{current.title}</b>
-            </span>
+            <ThreadTitle session={current} onRename={onRename} onDelete={onDelete} className="chName" />
           </span>
         </span>
       )}

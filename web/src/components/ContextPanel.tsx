@@ -52,6 +52,7 @@ import { needsYouText, type Tabs, type Views } from '../inboxTabs.js'
 import { FormatIcon } from '../artifactFormat.js'
 import { checkoutOf } from '../checkouts.js'
 import { draftTitle, type Draft } from '../drafts.js'
+import { renamedTo } from '../threadRename.js'
 import { useCheckouts } from '../hooks.js'
 import { MOD_LABEL } from '../keys.js'
 import { isWorking, shownStatus } from '../sessionModes.js'
@@ -322,7 +323,8 @@ export function SessionsPanel({
       onStartRename={() => setRenaming(s.id)}
       onEndRename={(title) => {
         setRenaming(null)
-        if (title !== undefined && title !== s.title) onRename(s.id, title)
+        const next = title === undefined ? undefined : renamedTo(title, s.title)
+        if (next) onRename(s.id, next)
       }}
       onSetPinned={(p) => onSetPinned(s.id, p)}
       onDelete={() => setDeleting(s)}
@@ -586,7 +588,7 @@ function SessionRow({ session: s, active, renaming, onSelect, onStartRename, onE
  * After a delete the row (the trigger) is gone, so focus lands on the panel's
  * search button instead.
  */
-function DeleteSessionDialog({
+export function DeleteSessionDialog({
   session,
   onCancel,
   onConfirm,

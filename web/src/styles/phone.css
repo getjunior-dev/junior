@@ -195,6 +195,11 @@ html.kbOpen .shell.mobile .panel { bottom: 0; }
 @media (max-width: 767px), (pointer: coarse) and (max-height: 500px) {
   #chatHeader { height: 34px; padding: 0 12px; gap: 8px; }
   #chatTitle { display: none; }
+  /* The top bar names the thread; here it keeps only its ⋯, always shown (no hover on touch), and the field while renaming. */
+  #chatHeader .chTitleWrap { display: inline-flex; align-items: center; min-width: 0; }
+  #chatHeader .chTitleWrap .chatTitleText { display: none; }
+  #chatHeader .chTitleWrap .chMenu { width: 32px; height: 32px; }
+  #chatHeader .chTitleWrap .chRename { min-width: 0; width: 60vw; }
   #chatHeader .pills { flex: 1 1 auto; margin-left: 0; min-width: 0; overflow: hidden; gap: 6px; }
   #chatHeader .pills .pill { flex: 0 1 auto; min-width: 0; max-width: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #chatHeader .pills .pill.mono { display: inline-block; }

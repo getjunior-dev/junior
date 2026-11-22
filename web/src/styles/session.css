@@ -96,6 +96,16 @@
 .chTop.float > .chStatus { flex: 0 1 auto; max-width: 300px; }
 .chTop.float > .chStatus.needs { border-color: color-mix(in srgb, var(--orange) 60%, transparent); }
 .chTop.float > .chRight { flex: none; padding: 0 4px 0 6px; gap: 4px; }
+/* A thread's title: ⋯ shows on hover (and while its menu is open), and Rename turns the title into a field in place. */
+.chTop .chWho.thread .chNames { flex-direction: row; align-items: center; gap: 4px; }
+.chTop .chWho.thread { padding-right: 4px; }
+.chTop .chMenu { flex: none; width: 24px; height: 24px; border-radius: var(--r-xs); opacity: 0; }
+.chTop .chWho:hover .chMenu, .chTop .chWho:focus-within .chMenu, .chTop .chMenu[data-state="open"] { opacity: 1; }
+.renameInput.chRename {
+  min-width: 220px; height: 26px; padding: 2px 8px; border-radius: var(--r-xs);
+  background: var(--canvas); border: 1px solid var(--hair-bright); color: var(--ink); font: inherit; font-size: 1rem; outline: none;
+}
+.renameInput.chRename:focus { border-color: var(--ink); }
 /* the transcript starts below the groups and fades out under them as it scrolls */
 .sessCol:has(#chatHeader.float) #transcript { padding-top: 72px; }
 .sessCol:has(#chatHeader.float)::before {
