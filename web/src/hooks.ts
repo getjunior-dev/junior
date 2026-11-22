@@ -83,6 +83,8 @@ export type Route =
   | { page: 'artifacts' }
   /** `#/prs`: your pull requests and the ones waiting on your review (team layout) */
   | { page: 'prs' }
+  /** `#/usage`: what Claude Code has cost on this machine */
+  | { page: 'usage' }
   | { page: 'artifact'; id: string }
   /** `#/run/<runId>/<path>`: one file in a team run's folder (plan.md, ledger.md, a handoff…) */
   | { page: 'run'; runId: string; path: string }
@@ -162,6 +164,8 @@ function parseRoute(hash: string): Route {
     }
   }
   if (hash === '/prs') return { page: 'prs' }
+  // Usage was a settings tab; its old link still opens it.
+  if (hash === '/usage' || hash === '/settings/usage') return { page: 'usage' }
   if (hash === '/changes') return { page: 'changes' }
   {
     const m = /^\/change\/([^/]+)\/(.+)$/.exec(hash)

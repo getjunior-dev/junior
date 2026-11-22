@@ -300,10 +300,11 @@ button.chip:hover:not(:disabled), .chip[data-state="open"] { color: var(--ink); 
 #newSessionHome .nsFace { position: relative; display: inline-flex; flex: none; }
 /* Junior's line: two-tone like the Junior page headline (muted greeting, ink question), and as big. */
 #newSessionHome .nsLine {
-  margin: 0; min-width: 0; font-family: var(--display); font-weight: 400; font-size: 3.5rem; line-height: 1.05; letter-spacing: -0.01em;
-  color: var(--ink); text-align: center; text-wrap: balance; min-height: 1.05em;
+  margin: 0; min-width: 0; font-family: var(--display); -webkit-text-stroke: var(--display-stroke) currentColor; paint-order: stroke fill; font-weight: 400; font-size: 2.6rem; line-height: 1.12; letter-spacing: -0.02em;
+  color: var(--ink); text-align: center; text-wrap: balance; min-height: 2.24em;
 }
-#newSessionHome .nsLine .g { color: var(--mute); }
+/* two lines, always: the muted greeting on top, the question under it. min-height holds both so "On it." doesn't jump */
+#newSessionHome .nsLine .g { display: block; color: var(--mute); }
 /* The untyped tail of the line: laid out but unseen, so the line keeps its final size while it types. */
 #newSessionHome .nsLine .nsRest { visibility: hidden; }
 #newSessionHome .nsWho.handoff .nsFace { animation: nsNod 0.5s ease-in-out; }
@@ -360,9 +361,9 @@ button.chip:hover:not(:disabled), .chip[data-state="open"] { color: var(--ink); 
 /* Phones: a smaller halo and line. */
 @media (max-width: 767px) {
   #newSessionHome .nsWho { gap: 14px; }
-  #newSessionHome .nsLine { font-size: 2.3rem; }
+  #newSessionHome .nsLine { font-size: 1.9rem; }
 }
-#newSessionHome h2 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 2.7692rem; letter-spacing: -0.36px; line-height: 1; color: var(--ink); }
+#newSessionHome h2 { margin: 0; font-family: var(--display); -webkit-text-stroke: var(--display-stroke) currentColor; paint-order: stroke fill; font-weight: 400; font-size: 2.1rem; letter-spacing: -0.015em; line-height: 1.1; color: var(--ink); }
 .chatComposer #composer { width: 100%; padding: 0; display: flex; justify-content: center; }
 /* A new chat's box, here and on the Junior page (PromptBox headBelow): the card holds the text
    and one row, + on the left, the model and send on the right; where it runs (project, branch,

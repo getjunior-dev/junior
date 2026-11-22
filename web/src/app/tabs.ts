@@ -1,4 +1,4 @@
-import { Terminal as TerminalIcon, FileText, FileDiff, CalendarClock, ListChecks, GitPullRequest, Settings, Home, type LucideProps } from 'lucide-react'
+import { Terminal as TerminalIcon, FileText, FileDiff, CalendarClock, ListChecks, GitPullRequest, Settings, Home, Wallet, type LucideProps } from 'lucide-react'
 import type { ComponentType } from 'react'
 import type { RailSection } from '../components/Rail.js'
 import type { TabKind } from '../components/TabBand.js'
@@ -13,6 +13,7 @@ export const PLACE_ICON: Record<Place, ComponentType<LucideProps>> = {
   prs: GitPullRequest,
   artifacts: FileText,
   jobs: CalendarClock,
+  usage: Wallet,
   settings: Settings,
   terminals: TerminalIcon,
   changes: FileDiff,
@@ -108,6 +109,7 @@ export function sectionOf(route: Route): RailSection | null {
       return 'inbox'
     case 'goals':
       return 'goals'
+    case 'usage':
     case 'settings':
       return null
   }

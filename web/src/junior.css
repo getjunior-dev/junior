@@ -168,7 +168,7 @@ a.jrRef { overflow-wrap: anywhere; }
 .jrCards { display: grid; grid-template-columns: 1fr 1fr; gap: 0 48px; margin-top: 6px; }
 .jrCard { padding: 12px 0 14px; border-top: 1px solid var(--hair); }
 .jrCard h3 { margin: 0 0 8px; color: var(--ash); font-size: 0.9231rem; font-weight: 500; }
-.jrCard .sent { font-family: var(--serif); font-size: 1.38rem; line-height: 1.32; letter-spacing: -0.1px; color: var(--ink); }
+.jrCard .sent { font-family: var(--display); -webkit-text-stroke: var(--display-stroke) currentColor; paint-order: stroke fill; font-size: 1.15rem; line-height: 1.45; color: var(--ink); }
 .jrCard .blank {
   padding: 0 1px; border: 0; border-radius: 0; border-bottom: 1px dashed var(--hair-bright); background: transparent;
   font: inherit; color: var(--ink); cursor: pointer;
@@ -396,7 +396,7 @@ button.jlTitle:hover { text-decoration: underline; text-decoration-color: var(--
 .jhFaceMenu .src .go { margin-left: auto; padding: 2px 9px; border: 1px solid var(--hair-strong); border-radius: var(--r); font-size: 0.9231rem; color: var(--ink); }
 .jhFaceMenu .src.proj { color: var(--ash); font-size: 0.9615rem; }
 
-.jhHello { margin: 22px 0 6px; max-width: 760px; font-family: var(--serif); font-weight: 400; font-size: 3.5rem; line-height: 1.05; letter-spacing: -0.01em; color: var(--ink); text-align: center; text-wrap: balance; }
+.jhHello { margin: 22px 0 6px; max-width: 760px; font-family: var(--display); -webkit-text-stroke: var(--display-stroke) currentColor; paint-order: stroke fill; font-weight: 400; font-size: 2.6rem; line-height: 1.12; letter-spacing: -0.02em; color: var(--ink); text-align: center; text-wrap: balance; }
 
 /* right now, in one line */
 .jhTicker { min-height: 26px; max-width: min(680px, 100%); margin: 0; display: flex; gap: 8px; align-items: center; justify-content: center; color: var(--mute); font-size: 1.115rem; white-space: nowrap; }
@@ -699,7 +699,7 @@ a.rdyChip:focus-visible { outline: 1px solid var(--hair-bright); outline-offset:
   .jhHalo { width: 124px; height: 124px; }
   .jhHalo::before { -webkit-mask: radial-gradient(circle, transparent 57px, #000 58px, #000 60px, transparent 61px); mask: radial-gradient(circle, transparent 57px, #000 58px, #000 60px, transparent 61px); }
   .jhHalo svg { width: 84px; height: 84px; }
-  .jhHello { font-size: 2.3rem; }
+  .jhHello { font-size: 1.9rem; }
   .jhTicker { font-size: 1rem; text-align: center; flex-wrap: wrap; white-space: normal; }
   .jhTicker .jobs { display: none; }
   .jhTicker.focus .end { flex-basis: 100%; max-width: 160px; height: 40px; margin: 4px auto 0; }

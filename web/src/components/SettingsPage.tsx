@@ -9,7 +9,7 @@
  * server; browser-scoped ones (Sessions · Shortcuts) write to localStorage.
  */
 import * as Tabs from '@radix-ui/react-tabs'
-import { type LucideProps, Zap, ShieldCheck, Settings2, Bot, Plug, Folder, Gauge, Sparkles, WandSparkles, BotMessageSquare, Users, Cable, Activity, Wallet, ScrollText, Palette, SwatchBook, MessagesSquare, Keyboard, Info, RefreshCw, X, Globe } from 'lucide-react'
+import { type LucideProps, Zap, ShieldCheck, Settings2, Bot, Plug, Folder, Gauge, Sparkles, WandSparkles, BotMessageSquare, Users, Cable, Activity, ScrollText, Palette, SwatchBook, MessagesSquare, Keyboard, Info, RefreshCw, X, Globe } from 'lucide-react'
 import { type ComponentType, useState, useEffect, useCallback } from 'react'
 import type { Workspace } from '../../../shared/protocol.js'
 import { isTypingTarget, anyDialogOpen } from '../keys.js'
@@ -18,7 +18,6 @@ import { ConnectorsPanel } from './Connectors.js'
 import { McpTab } from './McpTab.js'
 import { ProjectsTab } from './ProjectsTab.js'
 import { LibraryTab } from './LibraryTab.js'
-import { UsageTab } from './UsageTab.js'
 import { type SystemTab, ActivityTab, LogsTab } from './SystemModal.js'
 import { AppearanceTab, ThemesTab } from './settings/AppearanceTab.js'
 import { BriefsTab } from './settings/BriefsTab.js'
@@ -48,7 +47,6 @@ const ICONS: Record<SettingsTab, ComponentType<LucideProps>> = {
   connectors: Plug,
   mcp: Cable,
   activity: Activity,
-  usage: Wallet,
   logs: ScrollText,
   appearance: Palette,
   themes: SwatchBook,
@@ -200,9 +198,6 @@ export function SettingsPage({ workspace, tab, onOpenSystem }: Props) {
                   </Tabs.Content>
                   <Tabs.Content value="activity" className="settingsFill">
                     <ActivityTab key={nonce} />
-                  </Tabs.Content>
-                  <Tabs.Content value="usage" className="settingsFill">
-                    <UsageTab refreshNonce={nonce} />
                   </Tabs.Content>
                   <Tabs.Content value="logs" className="settingsFill">
                     <LogsTab key={nonce} />

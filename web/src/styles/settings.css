@@ -49,7 +49,7 @@
 
 .settingsNav { display: flex; flex-direction: column; min-height: 0; padding: 18px 10px 14px; background: var(--deep); border-right: 1px solid var(--hair); }
 .settingsNavHead { padding: 0 10px 12px; }
-.settingsNavHead .title { margin: 0; font-family: var(--display); font-weight: 400; font-size: 1.8462rem; line-height: 1; letter-spacing: -0.24px; color: var(--ink); }
+.settingsNavHead .title { margin: 0; font-family: var(--display); -webkit-text-stroke: var(--display-stroke) currentColor; paint-order: stroke fill; font-weight: 400; font-size: 1.45rem; line-height: 1.1; letter-spacing: -0.01em; color: var(--ink); }
 .settingsNavWs { display: flex; align-items: center; gap: 7px; margin-top: 10px; font-size: 0.9231rem; color: var(--mute); min-width: 0; }
 .settingsNavWs .wsDot { width: 7px; height: 7px; border-radius: var(--r-full); flex: none; }
 .settingsNavWs .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--body); }
@@ -71,7 +71,7 @@
 .settingsPane { display: flex; flex-direction: column; min-height: 0; min-width: 0; position: relative; }
 .settingsHead { display: flex; align-items: flex-start; gap: 16px; padding: 26px 32px 18px; border-bottom: 1px solid var(--hair); flex: none; }
 .settingsHead > div { min-width: 0; }
-.settingsHead h2 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 2.1538rem; line-height: 1.1; letter-spacing: -0.28px; color: var(--ink); }
+.settingsHead h2 { margin: 0; font-family: var(--display); -webkit-text-stroke: var(--display-stroke) currentColor; paint-order: stroke fill; font-weight: 400; font-size: 1.7rem; line-height: 1.15; letter-spacing: -0.015em; color: var(--ink); }
 .settingsHead p { margin: 6px 0 0; color: var(--mute); font-size: 1rem; line-height: 1.5; max-width: 64ch; }
 .settingsHeadRight { margin-left: auto; flex: none; display: flex; align-items: center; gap: 4px; }
 .settingsClose { flex: none; }

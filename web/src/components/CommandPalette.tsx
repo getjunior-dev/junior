@@ -340,6 +340,7 @@ export function CommandPalette({
       { id: 'junior-chat', section: 'Pages', label: 'Junior’s chat', hint: `${MOD_LABEL}J`, run: () => onNavigate('/junior') },
       { id: 'prs', section: 'Pages', label: 'Pull requests', run: () => onNavigate('/prs') },
       { id: 'artifacts', section: 'Pages', label: 'Artifacts', run: () => onNavigate('/artifacts') },
+      { id: 'usage', section: 'Pages', label: 'Usage', run: () => onNavigate('/usage') },
       { id: 'junior-page', section: 'Pages', label: 'Junior’s page: the ledger', run: () => onNavigate('/junior/needs') },
       getLayout() === 'team'
         ? { id: 'layout', section: 'Actions', label: 'Switch to the classic layout (rail and tabs)', run: () => setLayout('classic') }

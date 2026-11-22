@@ -15,6 +15,7 @@ import { usePersona, useYouName } from '../junior.js'
 import { ChatComposer, type ComposerTop } from './ChatComposer.js'
 import { JuniorHalo } from './JuniorHalo.js'
 import { splitTyped } from '../typed.js'
+import { Dots, ridge } from '../ui/Dots.js'
 
 export type { NewSession } from './ChatComposer.js'
 
@@ -45,6 +46,10 @@ function useTyped(text: string): string {
 
 type Props = Omit<ComponentProps<typeof ChatComposer>, 'top' | 'id'>
 
+/** The dot ridge along the bottom of an empty chat, as on getjunior.dev. One picture, drawn once. */
+const RIDGE = ridge(2)
+const RIDGE_INKS = ['--dot-wash-top', '--dot-wash-bottom']
+
 /** A draft tab, or an agent's DM before its first message: the composer that becomes a session on first send. */
 export function NewSessionComposer(props: Props) {
   return <ChatComposer {...props} id="newSessionHome" top={(s) => <Greeting s={s} />} />
@@ -62,6 +67,7 @@ function Greeting({ s }: { s: ComposerTop }) {
   return (
     <>
       <div className={`glow ${s.onClaude ? 'junior' : 'blue'}`} aria-hidden="true" />
+      <Dots className="nsDots" sampler={RIDGE} inks={RIDGE_INKS} />
       {s.onClaude ? (
         // Junior is Claude here: it asks, its face beside the line, and the face reacts to you.
         <div className={`nsWho${s.handoff ? ' handoff' : ''}`}>

@@ -4,7 +4,7 @@
  * - a *thing* gets a tab of its own: Junior's DM, an agent's DM, a chat or
  *   thread, a work item or PR, an artifact, a run, a job, a changed file, a
  *   terminal, a draft. Its key is a session id, or `<kind>:<id>`.
- * - a *place* (Tasks, PRs, Artifacts, Jobs, Settings…) shares the one preview
+ * - a *place* (Tasks, PRs, Artifacts, Jobs, Usage, Settings…) shares the one preview
  *   tab, replaced by the next place, until a double-click or starting work in
  *   it keeps it. Its key is `page:<place>`.
  *
@@ -13,7 +13,7 @@
 
 /** The parts of a route (hooks.ts `Route`) a tab key reads. Its own type, so tests need no browser. */
 export type TabRoute =
-  | { page: 'home' | 'goals' | 'inbox' | 'prs' | 'artifacts' | 'jobs' | 'settings' | 'terminals' | 'changes' }
+  | { page: 'home' | 'goals' | 'inbox' | 'prs' | 'artifacts' | 'jobs' | 'usage' | 'settings' | 'terminals' | 'changes' }
   | { page: 'junior'; tab?: string }
   | { page: 'agents'; name?: string }
   | { page: 'session' | 'draft' | 'terminal' | 'item' | 'artifact' | 'job'; id: string }
@@ -26,13 +26,14 @@ const JUNIOR_DM = 'junior'
 /** Junior's DM: the pinned first tab. */
 export const JUNIOR_TAB = `dm:${JUNIOR_DM}`
 
-export type Place = 'inbox' | 'prs' | 'artifacts' | 'jobs' | 'settings' | 'terminals' | 'changes' | 'junior'
+export type Place = 'inbox' | 'prs' | 'artifacts' | 'jobs' | 'usage' | 'settings' | 'terminals' | 'changes' | 'junior'
 
 export const PLACE_LABEL: Record<Place, string> = {
   inbox: 'Tasks',
   prs: 'Pull requests',
   artifacts: 'Artifacts',
   jobs: 'Jobs',
+  usage: 'Usage',
   settings: 'Settings',
   terminals: 'Terminals',
   changes: 'Changes',
@@ -76,6 +77,7 @@ export function tabKeyOf(route: TabRoute, team: boolean): string | null {
     case 'prs':
     case 'artifacts':
     case 'jobs':
+    case 'usage':
     case 'settings':
     case 'terminals':
     case 'changes':

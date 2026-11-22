@@ -284,7 +284,7 @@ async function frame(browser: Browser, scene: Scene, rawFile: string, f: Format,
   const radius = scene.mobile ? Math.round(44 * scale * 1.2) : 12
 
   const html = `<!doctype html><html><head>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Geist:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Varela+Round&family=Geist:wght@400;500&display=swap" rel="stylesheet">
 <style>
   html, body { margin: 0; width: ${f.width}px; height: ${f.height}px; overflow: hidden; }
   body {
@@ -297,7 +297,7 @@ async function frame(browser: Browser, scene: Scene, rawFile: string, f: Format,
     font-family: Geist, -apple-system, sans-serif; -webkit-font-smoothing: antialiased;
   }
   .text { text-align: center; max-width: ${f.width - pad * 2}px; }
-  h1 { margin: 0; font: 400 ${f.width >= 1500 ? 64 : 56}px/1.05 'Instrument Serif', serif; letter-spacing: -0.01em; color: ${light ? '#0b0c0e' : '#fcfdff'}; }
+  h1 { margin: 0; font: 400 ${f.width >= 1500 ? 64 : 56}px/1.1 'Varela Round', Geist, sans-serif; letter-spacing: -0.02em; -webkit-text-stroke: 0.022em currentColor; paint-order: stroke fill; color: ${light ? '#0b0c0e' : '#fcfdff'}; }
   p { margin: 14px 0 0; font-size: 22px; line-height: 1.4; color: ${light ? 'rgba(11,12,14,0.62)' : 'rgba(252,253,255,0.62)'}; }
   .win {
     width: ${w}px; height: ${h}px; border-radius: ${radius}px; overflow: hidden; flex: none;

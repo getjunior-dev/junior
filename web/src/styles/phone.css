@@ -119,9 +119,9 @@ html.kbOpen .shell.mobile .panel { bottom: 0; }
   /* The atmospheric glows are wider than a phone; they bleed, they never scroll. */
   .page, .itemPage, .termHome { overflow-x: hidden; }
   .pageHead { flex-wrap: wrap; align-items: flex-start; gap: 10px; margin-bottom: 16px; }
-  .display { font-size: 2.2rem; }
-  .display.md { font-size: 2rem; }
-  .display.sm { font-size: 1.8rem; }
+  .display { font-size: 1.75rem; }
+  .display.md { font-size: 1.6rem; }
+  .display.sm { font-size: 1.45rem; }
   .pageMeta { margin-left: 0; flex: 1 1 100%; min-width: 0; white-space: normal; }
   /* The filters and the actions each get a line, and scroll sideways rather than wrap. */
   .toolRow { flex-wrap: nowrap; flex-direction: column; align-items: stretch; gap: 8px; }
@@ -263,7 +263,7 @@ html.kbOpen .shell.mobile .panel { bottom: 0; }
     border-radius: var(--r-full); white-space: nowrap;
   }
   .settingsHead { padding: 14px 12px 10px 16px; border-bottom: 0; gap: 8px; }
-  .settingsHead h2 { font-size: 1.8rem; }
+  .settingsHead h2 { font-size: 1.45rem; }
   .settingsHead p { font-size: 0.9333rem; }
   .settingsHeadRight .iconBtn { width: 40px; height: 40px; }
   .settingsBody { padding: 4px 16px calc(40px + env(safe-area-inset-bottom)); }
@@ -323,7 +323,7 @@ html.kbOpen .shell.mobile .panel { bottom: 0; }
 @media (max-width: 767px), (pointer: coarse) and (max-height: 500px) {
   #newSessionHome { padding: 16px 12px; justify-content: flex-start; padding-top: 12vh; overflow-y: auto; overflow-x: hidden; }
   html.kbOpen #newSessionHome { padding-top: 12px; }
-  #newSessionHome h2 { font-size: 2.2rem; align-self: flex-start; padding: 0 4px; }
+  #newSessionHome h2 { font-size: 1.75rem; align-self: flex-start; padding: 0 4px; }
   #newSessionHome #box { min-height: 72px; }
 }
 

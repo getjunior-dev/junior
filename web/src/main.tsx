@@ -29,6 +29,7 @@ import './styles/phone-touch.css'
 import './styles/actions.css'
 import './styles/ultracode.css'
 import './styles/team.css'
+import './styles/dots.css'
 import './junior.css'
 
 // This tab's workspace comes from its own URL (`/w/<id>/`), so two tabs can

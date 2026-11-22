@@ -51,6 +51,9 @@
   --tint-yellow: rgba(255, 197, 61, 0.1);
   --tint-blue: rgba(128, 178, 246, 0.1);
   --tint-orange: rgba(255, 106, 31, 0.1);
+  /* the halftone dots from getjunior.dev (ui/Dots.tsx), in the logo's purple: the light end of a wash, and the dark end */
+  --dot-wash-top: rgba(165, 147, 245, 0.18);
+  --dot-wash-bottom: rgba(124, 100, 232, 0.39);
 
   /* legacy aliases still referenced by a few components */
   --text: var(--ink);
@@ -66,11 +69,15 @@
   --amber: var(--yellow);
   --accent: var(--ink);
 
-  /* The editorial-serif signature lane (design.md): the wordmark and the page
-     display headline. Everything else stays technical: Geist + Geist Mono. */
-  --serif: "Instrument Serif", "Tiempos Headline", Georgia, serif;
-  --display: var(--serif);
-  --brand: var(--serif);
+  /* The display lane (design.md): Varela Round, the wordmark's face and
+     getjunior.dev's headings, for page headlines only. Everything else stays
+     technical: Geist + Geist Mono. It has one weight, so a stroke in the
+     text's own colour thickens it, as the site does (paint-order keeps the
+     stroke behind the fill). Use the three together: font-family, stroke, paint-order. */
+  --display: "Varela Round", Geist, -apple-system, system-ui, sans-serif;
+  --display-stroke: 0.022em;
+  --serif: var(--display); /* legacy alias */
+  --brand: var(--display);
   --sans: Geist, Inter, -apple-system, system-ui, sans-serif;
   --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
@@ -196,6 +203,8 @@
   --tint-yellow: rgba(138, 109, 31, 0.12);
   --tint-blue: rgba(47, 99, 201, 0.1);
   --tint-orange: rgba(229, 88, 14, 0.1);
+  --dot-wash-top: rgba(124, 92, 230, 0.16);
+  --dot-wash-bottom: rgba(85, 52, 190, 0.34);
 
   /* semantic layer */
   --on-primary: #ffffff;

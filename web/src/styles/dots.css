@@ -1,0 +1,21 @@
+/* ---------- dots (getjunior.dev's halftone, in the app; pictures are ui/Dots.tsx) ----------
+   They are the logo's purple, whatever colour Junior's face is: the brand, not the persona.
+   Meters and progress bars are a row of dots that fill in. The mask cuts the
+   track and its fill into the same dots, so each bar keeps its own colours. */
+.ctxMeterBar,
+.costPop .ctxRow .ctxBar,
+.chatSide .csStats .ctxBar,
+.provMeter .bar,
+.teamMeter,
+.wfBar {
+  height: 6px; border-radius: 0;
+  -webkit-mask: radial-gradient(circle, black 2px, transparent 2.4px) 0 0 / 6px 6px round;
+  mask: radial-gradient(circle, black 2px, transparent 2.4px) 0 0 / 6px 6px round;
+}
+.provMeter .bar i { border-radius: 0; }
+
+/* an empty chat: the ridge along the bottom of the page, behind the greeting and the box */
+#newSessionHome .nsDots { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: min(26vh, 240px); display: block; pointer-events: none; z-index: -1; }
+/* its own stacking context, so the canvas sits behind the greeting and the box but above the page */
+#newSessionHome { isolation: isolate; }
+@media (max-width: 767px), (max-height: 620px) { #newSessionHome .nsDots { display: none; } }
