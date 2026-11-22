@@ -187,7 +187,7 @@ dialog p, .uiDialog p { color: var(--body); font-size: 1rem; line-height: 1.55; 
 .palKeep { flex: none; display: flex; align-items: center; gap: 8px; color: var(--body); font-size: 0.8462rem; cursor: pointer; }
 
 /* help */
-#helpOverlay { width: 400px; }
+#helpOverlay { width: 640px; max-width: calc(100vw - 48px); }
 #helpOverlay .helpHead {
   display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -4px -6px 14px 0;
   position: sticky; top: -22px; z-index: 1; background: var(--card);
@@ -203,6 +203,8 @@ dialog p, .uiDialog p { color: var(--body); font-size: 1rem; line-height: 1.55; 
   top: 50px; right: 88px; left: auto; transform: none; width: 600px; padding: 0;
   display: grid; grid-template-columns: 48px minmax(0, 1fr); overflow: hidden; max-height: calc(100vh - 100px);
 }
+/* Opened from the foot of the sidebar: it rises from that corner, over the sidebar's edge. */
+.uiDialog.sheet.fromSide { top: auto; right: auto; left: 12px; bottom: 56px; max-height: calc(100vh - 112px); }
 .sheetTabs { display: contents; }
 .sheetPane { min-width: 0; outline: none; }
 .sheetPane:focus-visible { outline: 1px solid var(--ink); outline-offset: 2px; border-radius: var(--r); }

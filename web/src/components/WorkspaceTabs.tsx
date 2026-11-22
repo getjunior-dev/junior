@@ -6,7 +6,7 @@ import { isHideNamesKey } from '../shortcuts.js'
 import { store } from '../store.js'
 import { basePath } from '../workspaceUrl.js'
 import { MOD_LABEL } from '../keys.js'
-import { fitTabs, monograms } from '../tabStrip.js'
+import { TAB_FULL, TAB_MONO, fitTabs, monograms } from '../tabStrip.js'
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuSub, MenuSubContent, MenuSubTrigger, MenuTrigger } from '../ui/Menu.js'
 import { Tooltip } from '../ui/Tooltip.js'
 
@@ -19,7 +19,9 @@ const BAR_H = 44
  * Workspace tabs in Junior.app's bar (.docs/workspace-tabs/topbar-variations.html, B).
  * The app hosts one view per tab; this view draws the strip from the window's
  * tab list. A click shows another view, nothing reloads. The tab in front
- * keeps today's chevron menu; another tab shows its orange count, never more.
+ * carries its name and today's chevron menu; every other tab is a small tile
+ * with the workspace's letter, its orange count on the corner and its name a
+ * hover away, so the bar stays quiet and each workspace is still one click.
  * Hide Workspace Names (⌘⇧H) draws every tab as a monogram tile, its name a
  * hover away (.docs/workspace-tabs/private-tabs.html).
  *
@@ -33,6 +35,7 @@ export function WorkspaceTabs({
   onNew,
   onSettings,
   trailing,
+  room,
 }: {
   state: DesktopTabsState
   /** Junior.app's tabs (desktopTabs), or the browser's stand-in */
@@ -42,6 +45,8 @@ export function WorkspaceTabs({
   onSettings: () => void
   /** after the + button: the build badge */
   trailing?: ReactNode
+  /** px the tabs may take, when the strip is sized by its tabs and so has no width of its own to measure */
+  room?: number
 }) {
   const t = host
   const inApp = host.kind === 'app'
@@ -50,6 +55,9 @@ export function WorkspaceTabs({
   const count = (id: string) => state.counts[id] ?? 0
   const hide = useSyncExternalStore(store.subscribeStructural, store.getHideNames)
   const mono = monograms(workspaces)
+  // A tile's letter: the workspace's first letter, or its two-letter monogram when another workspace starts the same.
+  const initial = (w: Workspace) => (w.name.trim()[0] ?? '?').toUpperCase()
+  const letter = (w: Workspace) => (workspaces.some((o) => o.id !== w.id && initial(o) === initial(w)) ? mono[w.id] : initial(w))
   const elsewhereWord = inApp ? 'its own window' : 'a new browser tab'
 
   // ⌘⇧H: Junior.app's View menu catches it first; the browser has no menu, so the page listens.
@@ -91,8 +99,9 @@ export function WorkspaceTabs({
       count: tab.id === state.active ? 0 : count(tab.id),
     })),
     state.active,
-    width,
-    hide,
+    // Every tab but the one in front is a tile; the front one takes a full tab's room.
+    hide ? (room ?? width) : (room ?? width) - (TAB_FULL - TAB_MONO),
+    true,
   )
   const open = new Set([...state.tabs.map((tab) => tab.id), ...state.elsewhere.map((e) => e.id)])
   const closed = workspaces.filter((w) => !open.has(w.id))
@@ -126,9 +135,9 @@ export function WorkspaceTabs({
     const i = tabs.findIndex((tab) => tab.id === id)
     return i === tabs.length - 1 && i >= 8 ? 9 : i < 8 ? i + 1 : 0
   }
-  // Names hidden: the name lives in the tooltip, never on the bar.
-  const named = (w: Workspace, n: number, tab: ReactNode) =>
-    hide ? (
+  // A tile (names hidden, or a tab that is not in front): the name lives in the tooltip, never on the bar.
+  const named = (w: Workspace, n: number, tab: ReactNode, tile = hide) =>
+    tile ? (
       <Tooltip
         side="bottom"
         delay={400}
@@ -139,6 +148,7 @@ export function WorkspaceTabs({
             <span>{w.name}</span>
             {n > 0 && <span className="wsTipMeta">· {n} need{n === 1 ? 's' : ''} you</span>}
             {keyOf(w.id) > 0 && <kbd className="wsKbd">⌃{keyOf(w.id)}</kbd>}
+            {!hide && w.id !== state.active && <span className="wsTipMeta">· {MOD_LABEL}-click: {elsewhereWord}</span>}
           </>
         }
       >
@@ -148,10 +158,14 @@ export function WorkspaceTabs({
       tab
     )
   // Names hidden: a tile in the workspace's colour, its monogram in place of dot and name.
-  const face = (w: Workspace) =>
+  const face = (w: Workspace, tile = false) =>
     hide ? (
       <span className="wsMono" aria-hidden="true">
         {mono[w.id]}
+      </span>
+    ) : tile ? (
+      <span className={`wsMono${letter(w).length > 1 ? ' two' : ''}`} aria-hidden="true">
+        {letter(w)}
       </span>
     ) : (
       <>
@@ -181,7 +195,7 @@ export function WorkspaceTabs({
         if (!ours(id)) t.move?.(id, 'here')
       }}
     >
-      <div className={`wsTabRow${fit.short ? ' short' : ''}${hide ? ' mono' : ''}`} role="tablist" aria-label="Workspaces">
+      <div className={`wsTabRow${hide ? ' mono' : ' compact'}`} role="tablist" aria-label="Workspaces">
         {fit.shown.map((id) => {
           const w = byId.get(id)!
           const n = count(id)
@@ -266,18 +280,18 @@ export function WorkspaceTabs({
                   type="button"
                   role="tab"
                   aria-selected="false"
-                  aria-label={hide ? w.name : undefined}
-                  className="wsTab"
+                  aria-label={n ? `${w.name}, ${n} need${n === 1 ? 's' : ''} you` : w.name}
+                  className={`wsTab${hide ? '' : ' tile'}`}
                   style={hide ? { ['--ws' as string]: w.color } : undefined}
-                  title={hide ? undefined : `${w.name}${n ? ` — ${n} need${n === 1 ? 's' : ''} you` : ''}\n${MOD_LABEL}-click: ${elsewhereWord}`}
                   onMouseDown={(e) => e.button === 1 && e.preventDefault()}
                   onClick={(e) => (wantsWindow(e) && t.move ? t.move(id, 'new') : t.activate(id))}
                   onAuxClick={(e) => e.button === 1 && t.move?.(id, 'new')}
                   {...dragProps(id)}
                 >
-                  {face(w)}
+                  {face(w, true)}
                   {n > 0 && <span className="wsCount">{n}</span>}
                 </button>,
+                true,
               )}
             </Fragment>
           )

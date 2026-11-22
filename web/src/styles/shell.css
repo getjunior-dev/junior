@@ -265,6 +265,18 @@ kbd { font-family: var(--mono); font-size: 0.8462rem; color: var(--ash); border:
 }
 .wsTabRow.mono .wsTabChev { margin-right: 0; }
 .wsMono { font: 500 0.8462rem/1 var(--mono); letter-spacing: 0.04em; }
+/* The usual strip: the workspace in front keeps its name; every other one is a quiet tile with its
+   letter and, on the corner, its needs-you count. One click each, and the bar stays calm. */
+.wsTabRow.compact { gap: 6px; }
+.wsTabRow.compact .wsTab.on { width: auto; max-width: 220px; box-shadow: inset 0 0 0 1px var(--hair-strong); }
+.wsTabRow.compact .wsTab.tile {
+  position: relative; width: 28px; padding: 0; justify-content: center; border-radius: var(--r-sm);
+  color: var(--mute); background: var(--card); box-shadow: inset 0 0 0 1px var(--hair-strong);
+}
+/* a two-letter mark (two workspaces share a first letter) needs a little more room */
+.wsTabRow.compact .wsTab.tile:has(.wsMono.two) { width: 34px; }
+.wsTabRow.compact .wsTab.tile:hover { color: var(--ink); background: var(--elev); }
+.wsTabRow.compact .wsTab.tile .wsCount { position: absolute; top: -5px; right: -6px; }
 .wsTabRow.mono .wsCount { position: absolute; top: -5px; right: -6px; }
 .wsTip { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
 .wsTip .wsDot { width: 7px; height: 7px; border-radius: var(--r-full); flex: none; }
@@ -384,13 +396,15 @@ kbd { font-family: var(--mono); font-size: 0.8462rem; color: var(--ash); border:
   --tab-min: 132px;
   --tab-w: 184px;
   display: flex; align-items: stretch; height: var(--bar-h); flex: none; overflow: hidden;
-  border-bottom: 1px solid var(--hair); background: var(--canvas); position: relative; z-index: 1;
+  /* The base line is drawn inside the band, so the tab in front can cover it and run into the page. */
+  box-shadow: inset 0 -1px 0 var(--hair); background: var(--deep); position: relative; z-index: 1;
+  padding-left: 6px;
 }
 /* Only the tabs before the + scroll. Tabs squeeze to --tab-min first and
    the strip starts scrolling only once even that stops fitting, so a
    crowded band degrades in two steps rather than clipping. */
 .tabband .strip {
-  display: flex; align-items: stretch; flex: 0 1 auto; min-width: 0;
+  display: flex; align-items: flex-end; align-self: stretch; gap: 2px; flex: 0 1 auto; min-width: 0;
   overflow-x: auto; overflow-y: hidden; scrollbar-width: none; overscroll-behavior-x: contain;
   scroll-behavior: smooth;
 }
@@ -412,9 +426,19 @@ kbd { font-family: var(--mono); font-size: 0.8462rem; color: var(--ash); border:
 .tab:hover { color: var(--ink); background: var(--hair-soft); }
 .tab.active { background: var(--card); color: var(--ink); box-shadow: inset 0 1px 0 var(--hair-strong); }
 .tab.dim { color: var(--ash); }
+/* The band's tabs are rounded on top and sit on its base line; the one in front is the page's own
+   colour with a hairline over and beside it, so it reads as joined to what it shows. */
+.tabband .tab { align-self: flex-end; height: calc(var(--bar-h) - 7px); border-right: 0; border-radius: 10px 10px 0 0; }
+.tabband .tab:hover { background: var(--wash-2); }
+.tabband .tab.active { background: var(--canvas); box-shadow: inset 0 1px 0 var(--hair-strong), inset 1px 0 0 var(--hair), inset -1px 0 0 var(--hair); }
+.tabband > .tab { margin-right: 2px; }
 /* Junior's DM: pinned first, the face alone, never squeezed or scrolled away. */
 .tab.juniorTab { flex: none; gap: 5px; padding: 0 12px; justify-content: center; }
 .tab.juniorTab .pdot { position: absolute; top: 9px; right: 8px; }
+/* An agent's band (team layout): its DM leads with its face and name, then its threads. */
+.tab.juniorTab.labelled { gap: 8px; padding: 0 14px 0 12px; max-width: 200px; }
+.tab.juniorTab.labelled .t { font-weight: 500; }
+.tab.juniorTab.labelled .pdot { position: static; }
 /* Dragged tab reads as lifted out of the strip; the drop line marks where it
    would land, drawn absolute so it never widens the flex row under the
    cursor. */
@@ -438,6 +462,18 @@ kbd { font-family: var(--mono); font-size: 0.8462rem; color: var(--ash); border:
 /* the + with its word: alone in the band, a bare + reads as decoration */
 .tabband .add.labelled { width: auto; gap: 6px; padding: 0 12px; font: inherit; font-size: 0.9615rem; cursor: pointer; }
 .tabband .add.showPanel { border-right: 1px solid var(--hair); }
+/* the band's agent: every thread it has, behind the chevron beside + */
+.tabband .add.threadsBtn { width: 26px; margin-left: -6px; }
+.tabband .add.threadsBtn[data-state="open"] { color: var(--ink); }
+.uiMenu.bandThreads { width: 320px; max-height: min(60vh, 520px); overflow-y: auto; }
+.bandThreadsLabel { padding: 8px 10px 4px; font: 400 0.7857rem/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ash); }
+.bandThreadsEmpty { padding: 10px; color: var(--ash); font-size: 0.9286rem; }
+.uiMenuItem.bandThread .name { flex: 1; min-width: 0; }
+.uiMenuItem.bandThread.on { background: var(--wash-2); color: var(--ink); }
+.bandState { flex: none; margin-left: 10px; font: 400 0.6786rem/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ash); }
+.bandState.you { color: var(--orange); }
+.bandState.working { color: var(--blue); }
+.bandState.stopped { color: var(--red); }
 .content { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; }
 
 /* ---------- page shell (inbox / item / jobs / projects / connectors) ---------- */
@@ -449,13 +485,13 @@ kbd { font-family: var(--mono); font-size: 0.8462rem; color: var(--ash); border:
 .page.full .inner { max-width: none; }
 .pageHead { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 18px; }
 .pageHead > div:first-child { min-width: 0; }
-.display { margin: 0; font-family: var(--display); font-weight: 400; font-size: 2.7692rem; line-height: 1; letter-spacing: -0.36px; color: var(--ink); }
+.display { margin: 0; font-family: var(--display); -webkit-text-stroke: var(--display-stroke) currentColor; paint-order: stroke fill; font-weight: 400; font-size: 2.1rem; line-height: 1.1; letter-spacing: -0.015em; color: var(--ink); }
 .display .muted { color: var(--mute); }
 /* the count of what's blocking is the one alarming number in the headline,
    lift it to ink so it reads alongside the day, not with the total. */
 .display .blk { color: var(--ink); }
-.display.md { font-size: 2.4615rem; line-height: 1.05; letter-spacing: -0.32px; }
-.display.sm { font-size: 2.1538rem; line-height: 1.1; letter-spacing: -0.28px; }
+.display.md { font-size: 1.85rem; line-height: 1.1; letter-spacing: -0.015em; }
+.display.sm { font-size: 1.65rem; line-height: 1.15; letter-spacing: -0.01em; }
 .pageHead .sub, .page p.sub { margin: 8px 0 0; color: var(--mute); font-size: 1rem; line-height: 1.5; max-width: 60ch; }
 .pageMeta { margin-left: auto; color: var(--ash); font-size: 0.9231rem; display: flex; align-items: center; gap: 6px; white-space: nowrap; flex: none; }
 .pageMeta svg { flex: none; }

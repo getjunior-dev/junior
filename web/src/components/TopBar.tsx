@@ -1,4 +1,4 @@
-import { Activity, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, CircleHelp, Gauge, PanelLeft, Plus, Settings, Settings2, SquareArrowOutUpRight } from 'lucide-react'
+import { Activity, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, CircleHelp, PanelLeft, Plus, Settings, Settings2, SquareArrowOutUpRight } from 'lucide-react'
 import { useRef, useState, type ReactNode } from 'react'
 import { goBack, goForward, hasTabs, isDesktop, useDesktopNav, useDesktopTabs } from '../desktop.js'
 import { MOD_LABEL } from '../keys.js'
@@ -15,6 +15,11 @@ import { ProvidersButton } from './ProvidersButton.js'
 import { WaitingButton } from './WaitingButton.js'
 import { WorkspaceChips } from './WorkspaceChips.js'
 import { appTabsHost, useBrowserTabs, WorkspaceTabs } from './WorkspaceTabs.js'
+/** Up to this many workspaces the strip is as wide as its tiles and never folds any; past it, it gets a share of the bar and folds the rest into +N. */
+const FEW_WORKSPACES = 6
+
+/** Where the team layout's page tabs go when the top bar hosts them (the browser; Junior.app keeps them under its bar). */
+export const TOP_BAND_SLOT = 'topBandSlot'
 
 type Props = {
   /** Phone layout: a back button and the page title take the logo's place. */
@@ -167,7 +172,7 @@ export function TopBar({
         )}
         <BuildBadge build={build} onOpenSystem={onOpenSystem} />
         <button type="button" className="topIcon" aria-label={CONN_TITLE[conn]} onClick={() => onOpenSystem('status')}>
-          <Gauge size={17} aria-hidden="true" />
+          <Activity size={17} aria-hidden="true" />
           <span className={`connDot ${conn === 'connected' ? '' : conn === 'connecting' ? 'connecting' : 'down'}`} aria-hidden="true" />
         </button>
         <button type="button" className={`topIcon${settingsOpen ? ' on' : ''}`} aria-label="Settings" aria-pressed={!!settingsOpen} onClick={onOpenSettings}>
@@ -180,22 +185,29 @@ export function TopBar({
   }
   if (team) {
     return (
-      <header className={`topbar teamBar${team.sidebarOpen ? '' : ' sidebarHidden'}`}>
+      <header className={`topbar teamBar oneRow${team.sidebarOpen ? '' : ' sidebarHidden'}`}>
         <div className="tbSide">
           <JuniorLogo />
+          {/* The build badge describes the app, so it rides beside its name. */}
+          <BuildBadge build={build} onOpenSystem={onOpenSystem} />
           <span className="spacer" />
           <SidebarButtons team={team} />
         </div>
-        {/* The same tab strip as Junior.app's; the build badge rides after its +. */}
-        <BrowserTabs
-          workspaces={workspaces}
-          workspaceId={workspaceId}
-          onSwitch={onSwitchWorkspace}
-          onNew={onNewWorkspace}
-          onSettings={onWorkspaceSettings}
-          trailing={<BuildBadge build={build} onOpenSystem={onOpenSystem} />}
-        />
-        <SystemIcons workspace={current} conn={conn} onOpenSystem={onOpenSystem} onOpenSettings={onOpenSettings} settingsOpen={settingsOpen} onHelp={onHelp} noSettings />
+        {/* One row: the agent's tabs (App portals its TabBand in here) start at the sidebar's edge, the workspaces sit on the right. */}
+        <div id={TOP_BAND_SLOT} className="tbBand" />
+        {/* The same tab strip as Junior.app's. Its zone is as wide as its tabs need, never the bar's rest. Phone, status and help
+            are at the foot of the sidebar (SystemIcons, passed there by App), so the row holds threads and workspaces alone. */}
+        <div className="tbWs" style={workspaces.length <= FEW_WORKSPACES ? undefined : { width: '46%' }}>
+          <BrowserTabs
+            roomy={workspaces.length <= FEW_WORKSPACES}
+            workspaces={workspaces}
+            workspaceId={workspaceId}
+            onSwitch={onSwitchWorkspace}
+            onNew={onNewWorkspace}
+            onSettings={onWorkspaceSettings}
+            trailing={null}
+          />
+        </div>
       </header>
     )
   }
@@ -227,6 +239,7 @@ function BrowserTabs({
   onNew,
   onSettings,
   trailing,
+  roomy,
 }: {
   workspaces: readonly Workspace[]
   workspaceId: string
@@ -234,6 +247,8 @@ function BrowserTabs({
   onNew: () => void
   onSettings: () => void
   trailing: ReactNode
+  /** the strip sizes itself to its tabs: show every one */
+  roomy?: boolean
 }) {
   const { state, host } = useBrowserTabs(workspaces, workspaceId, onSwitch)
   if (!workspaces.length || !workspaceId)
@@ -242,11 +257,11 @@ function BrowserTabs({
         {trailing}
       </div>
     )
-  return <WorkspaceTabs state={state} host={host} workspaces={workspaces} onNew={onNew} onSettings={onSettings} trailing={trailing} />
+  return <WorkspaceTabs state={state} host={host} workspaces={workspaces} onNew={onNew} onSettings={onSettings} trailing={trailing} room={roomy ? 10_000 : undefined} />
 }
 
 /** Waiting, providers, system status, activity, settings, help, the right end of the bar. */
-function SystemIcons({
+export function SystemIcons({
   workspace,
   conn,
   onOpenSystem,
@@ -261,16 +276,15 @@ function SystemIcons({
 }) {
   return (
     <>
-      <WaitingButton />
+      {/* The team layout's sidebar already says what waits on you (Junior's line, Waiting on you), and its Usage page and
+          Settings → Providers carry the plans, so the bar keeps no bell and no providers stack there. */}
+      {!noSettings && <WaitingButton />}
       <PhoneButton />
-      {/* a daemon from before providers sends none. It shows once that daemon restarts */}
-      {workspace?.providers && <ProvidersButton workspace={workspace} />}
-      <button type="button" className="topIcon" title={CONN_TITLE[conn]} onClick={() => onOpenSystem('status')}>
-        <Gauge size={15} aria-hidden="true" />
-        <span className={`connDot ${conn === 'connected' ? '' : conn === 'connecting' ? 'connecting' : 'down'}`} aria-hidden="true" />
-      </button>
-      <button type="button" className="topIcon" title="Job runs and activity" onClick={() => onOpenSystem('activity')}>
+      {!noSettings && workspace?.providers && <ProvidersButton workspace={workspace} />}
+      {/* one door to the system sheet: status (with the connection dot), activity and logs are its tabs */}
+      <button type="button" className="topIcon" title={`${CONN_TITLE[conn]} · status, activity and logs`} aria-label="Status and activity" onClick={() => onOpenSystem('status')}>
         <Activity size={15} aria-hidden="true" />
+        <span className={`connDot ${conn === 'connected' ? '' : conn === 'connecting' ? 'connecting' : 'down'}`} aria-hidden="true" />
       </button>
       {!noSettings && (
         <button

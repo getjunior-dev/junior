@@ -52,12 +52,13 @@ export function SystemModal({
   open,
   initialTab = 'status',
   conn,
-  onClose,
-}: {
+  onClose, fromSide }: {
   open: boolean
   initialTab?: SystemTab
   conn: ConnState
   onClose: () => void
+  /** its icon lives at the foot of the sidebar (the one-row top bar): the sheet rises from there, not from the top right */
+  fromSide?: boolean
 }) {
   const [tab, setTab] = useState<SystemTab>(initialTab)
   const [nonce, setNonce] = useState(0)
@@ -74,7 +75,7 @@ export function SystemModal({
     <Dialog.Root open={open} onOpenChange={(o) => !o && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className="projOverlay" />
-        <Dialog.Content className="uiDialog sheet" onCloseAutoFocus={returnFocus}>
+        <Dialog.Content className={`uiDialog sheet${fromSide ? ' fromSide' : ''}`} onCloseAutoFocus={returnFocus}>
           {/* display: contents, so the rail and the body stay the sheet's two grid columns */}
           <Tabs.Root
             className="sheetTabs"
