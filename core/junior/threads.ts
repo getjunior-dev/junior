@@ -134,6 +134,35 @@ export function pinnedThreads(sessions: readonly ThreadSession[], needing: Reado
     }))
 }
 
+/**
+ * One agent's threads (`agent` undefined = plain Junior's), whoever started
+ * them: the sidebar lists the live ones under the agent, the tab band's menu
+ * lists them all. Live = on your turn, working, stopped, or touched in the
+ * last 12 hours. A job run that found nothing new is left out. Each list is
+ * ordered like the open threads: yours first, newest first within a state.
+ */
+export function agentThreads(sessions: readonly ThreadSession[], agent: string | undefined, needing: ReadonlySet<string>, now: number): { live: Thread[]; earlier: Thread[] } {
+  const dms = new Set(sessions.filter((s) => s.kind === 'dm').map((s) => s.id))
+  const all = sessions
+    .filter((s) => isChat(s) && !s.archived && (s.agent || undefined) === agent)
+    .map((s) => ({ s, state: needing.has(s.id) ? ('you' as const) : threadState(s) }))
+  const isLive = (x: (typeof all)[number]) => x.state !== 'ready' || now - x.s.updatedAt < READY_FOR_MS
+  const rows = (xs: typeof all): Thread[] =>
+    xs
+      .sort((a, b) => ORDER[a.state] - ORDER[b.state] || b.s.updatedAt - a.s.updatedAt)
+      .map(({ s, state }) => ({
+        id: s.id,
+        title: s.title,
+        ...(s.agent ? { agent: s.agent } : {}),
+        state,
+        fromJunior: !!s.startedBy && dms.has(s.startedBy),
+        question: !!s.waiting && s.waitingOn === 'AskUserQuestion',
+        job: !!s.jobId,
+        updatedAt: s.updatedAt,
+      }))
+  return { live: rows(all.filter(isLive)), earlier: rows(all.filter((x) => !isLive(x))) }
+}
+
 export type AgentStatus = { state: 'you' | 'working' | 'idle'; line: string; threads: number }
 
 /**

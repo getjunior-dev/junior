@@ -4,7 +4,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agentStatus, openThreads, pinnedThreads, READY_FOR_MS, threadReportLine, threadState, waitingThreads, type ThreadSession } from '../core/junior/threads.js'
+import { agentStatus, agentThreads, openThreads, pinnedThreads, READY_FOR_MS, threadReportLine, threadState, waitingThreads, type ThreadSession } from '../core/junior/threads.js'
 
 const NOW = 1_800_000_000_000
 const dm: ThreadSession = { id: 'dm', title: 'Junior', kind: 'dm', status: 'idle', updatedAt: NOW }
@@ -104,4 +104,26 @@ test('pinned threads: every agent, finished ones stay, a needs row reads as your
   assert.deepEqual(pinned.map((t) => [t.id, t.state]), [['send', 'you'], ['asks', 'you'], ['done', 'ready']])
   assert.equal(pinned[2].agent, 'reviewer')
   assert.equal(pinned[1].question, true)
+})
+
+test('agent threads: one agent\'s chats, live apart from earlier, whoever started them', () => {
+  const rows = [
+    dm,
+    s('rev-dm', { kind: 'dm', agent: 'reviewer' }),
+    s('rev-old', { agent: 'reviewer', updatedAt: NOW - READY_FOR_MS - 1 }),
+    s('rev-ready', { agent: 'reviewer' }),
+    s('rev-busy', { agent: 'reviewer', status: 'running' }),
+    s('rev-asks', { agent: 'reviewer', waiting: true, updatedAt: NOW - READY_FOR_MS - 1 }),
+    s('rev-sends', { agent: 'reviewer', updatedAt: NOW - READY_FOR_MS - 1 }),
+    s('rev-quiet-job', { agent: 'reviewer', jobId: 'j', archived: true }),
+    s('rev-worker', { agent: 'reviewer', teamRun: { role: 'worker' } }),
+    s('jr-chat'),
+    s('writer-chat', { agent: 'writer' }),
+  ]
+  const rev = agentThreads(rows, 'reviewer', new Set(['rev-sends']), NOW)
+  assert.deepEqual(rev.live.map((t) => t.id), ['rev-asks', 'rev-sends', 'rev-busy', 'rev-ready'])
+  assert.deepEqual(rev.live.map((t) => t.state), ['you', 'you', 'working', 'ready'])
+  assert.deepEqual(rev.earlier.map((t) => t.id), ['rev-old'])
+  // Plain Junior's threads are the chats with no agent; its DM is not one of them.
+  assert.deepEqual(agentThreads(rows, undefined, new Set(), NOW).live.map((t) => t.id), ['jr-chat'])
 })
