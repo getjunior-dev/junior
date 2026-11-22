@@ -79,6 +79,29 @@
 .chTop .chStatus.needs .d { background: var(--orange); }
 .chTop .chStatus.error { color: var(--red); }
 .chTop .chStatus.error .d { background: var(--red); }
+/* Floating (desktop): no bar. Who and what it is doing sit at the top left of the chat, the tools at
+   the top right, each a small panel over the transcript, which fades out behind them. The row itself
+   takes no clicks, so the gap between the two groups still scrolls and selects the text under it. */
+#chatHeader.chTop.float {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 3; height: auto; padding: 10px 12px 0; gap: 8px;
+  border-bottom: 0; pointer-events: none;
+}
+.chTop.float > .chWho, .chTop.float > .chStatus, .chTop.float > .chRight {
+  pointer-events: auto; height: 36px; border: 1px solid var(--hair-strong); border-radius: 10px; background: var(--card);
+}
+.chTop.float > .chWho { flex: 0 1 auto; max-width: min(360px, 34%); padding: 0 12px 0 8px; gap: 8px; }
+.chTop.float > button.chWho:hover, .chTop.float > button.chWho.on { background: var(--elev); }
+.chTop.float .chName { font-size: 1rem; }
+.chTop.float .chSub { display: none; }
+.chTop.float > .chStatus { flex: 0 1 auto; max-width: 300px; }
+.chTop.float > .chStatus.needs { border-color: color-mix(in srgb, var(--orange) 60%, transparent); }
+.chTop.float > .chRight { flex: none; padding: 0 4px 0 6px; gap: 4px; }
+/* the transcript starts below the groups and fades out under them as it scrolls */
+.sessCol:has(#chatHeader.float) #transcript { padding-top: 72px; }
+.sessCol:has(#chatHeader.float)::before {
+  content: ""; position: absolute; z-index: 2; top: 0; left: 0; right: 10px; height: 76px; pointer-events: none;
+  background: linear-gradient(var(--canvas) 60%, transparent);
+}
 /* Context: a short bar and its percentage, neutral until 80%, then amber. The cost and tokens are in its popover. */
 .chTop .ctxHead {
   flex: none; height: 28px; display: inline-flex; align-items: center; gap: 8px; padding: 0 6px; border: 0; border-radius: var(--r);
@@ -504,7 +527,7 @@ body.bpResizing, body.bpResizing * { cursor: col-resize !important; user-select:
 .bpStage:has(> .bpEmpty) { display: flex; }
 .bpStage > .bpEmpty { margin: auto; text-align: center; padding: 24px; }
 .bpEmpty .bpGlobe { color: var(--ash); margin-bottom: 10px; }
-.bpStage > .bpEmpty .bpLead { font-family: inherit; font-size: 1.0385rem; font-weight: 500; line-height: 1.4; margin-bottom: 4px; }
+.bpStage > .bpEmpty .bpLead { font-family: inherit; -webkit-text-stroke: 0; font-size: 1.0385rem; font-weight: 500; line-height: 1.4; margin-bottom: 4px; }
 .bpEmpty .bpDetect { color: var(--ash); font-size: 0.8846rem; margin-top: 18px; }
 .bpLink { border: 0; padding: 0; background: none; color: var(--ink); font: inherit; cursor: pointer; }
 .bpLink:hover { text-decoration: underline; text-underline-offset: 3px; }
@@ -514,7 +537,7 @@ body.bpResizing, body.bpResizing * { cursor: col-resize !important; user-select:
 .bpStage.driving { box-shadow: inset 0 0 0 2px var(--blue); }
 .bpEmpty { max-width: 420px; margin: 56px auto 0; padding: 0 20px 24px; color: var(--mute); font-size: 0.9231rem; line-height: 1.55; }
 .bpEmpty p { margin: 0 0 14px; }
-.bpEmpty .bpLead { font-family: var(--display); font-size: 1.8462rem; color: var(--ink); line-height: 1.15; margin-bottom: 6px; }
+.bpEmpty .bpLead { font-family: var(--display); -webkit-text-stroke: var(--display-stroke) currentColor; paint-order: stroke fill; font-size: 1.45rem; color: var(--ink); line-height: 1.2; margin-bottom: 6px; }
 .bpEmpty .bpWait { color: var(--ash); font-size: 0.8462rem; }
 .bpEmpty .bpLead .mono { font-size: 0.75em; }
 /* The page as a picture while one of our menus would otherwise blank it (design §3.8). */

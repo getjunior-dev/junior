@@ -7,12 +7,16 @@
 .chatSide .csStats .ctxBar,
 .provMeter .bar,
 .teamMeter,
-.wfBar {
+.wfBar,
+.chTop .ctxHeadBar {
   height: 6px; border-radius: 0;
   -webkit-mask: radial-gradient(circle, black 2px, transparent 2.4px) 0 0 / 6px 6px round;
   mask: radial-gradient(circle, black 2px, transparent 2.4px) 0 0 / 6px 6px round;
 }
 .provMeter .bar i { border-radius: 0; }
+/* the chat header's context meter: nine dots, the unfilled ones a step brighter than a hairline so they still read as dots */
+.chTop .ctxHeadBar { width: 54px; background: var(--stone); }
+.chTop .ctxHeadBar i { background: var(--ink); border-radius: 0; }
 
 /* an empty chat: the ridge along the bottom of the page, behind the greeting and the box */
 #newSessionHome .nsDots { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: min(26vh, 240px); display: block; pointer-events: none; z-index: -1; }

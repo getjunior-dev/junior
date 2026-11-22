@@ -49,12 +49,15 @@ type HeaderProps = {
   onNavigate: (hash: string) => void
   /** Team layout: the face opens the agent's page instead of its card in the sidebar. */
   onAbout?: () => void
+  /** Desktop: no bar. Who and what it is doing float at the top left of the chat, the tools at the top right, and the transcript runs under them. */
+  floating?: boolean
 }
 
 /**
- * The top of a chat. On a desktop, one bar: who you talk to (a DM shows the
- * agent's name and what it is for), what it is doing now, how full its
- * context is, then the chat's tools, each opening its tab in the sidebar.
+ * The top of a chat. On a desktop: who you talk to (a DM shows the agent's
+ * name), what it is doing now, how full its context is, then the chat's
+ * tools, each opening its tab in the sidebar. `floating` draws them as two
+ * groups over the transcript, left and right, instead of a bar.
  * A phone keeps a slim row with the tools as menus.
  */
 export function ChatHeader(props: HeaderProps) {
@@ -94,7 +97,7 @@ type HeadState = 'needs' | 'working' | 'error' | 'idle'
 const upperFirst = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
 
 /** The desktop bar. */
-function TopBar({ current, chatHeaderRef, currentCheckout, newTerminalIn, agents, browserOpen, onAbout }: HeaderProps) {
+function TopBar({ current, chatHeaderRef, currentCheckout, newTerminalIn, agents, browserOpen, onAbout, floating = false }: HeaderProps) {
   const dm = current.kind === 'dm'
   const shown = shownStatus(current)
   const { agent, colour } = useScopedAgent()
@@ -122,9 +125,21 @@ function TopBar({ current, chatHeaderRef, currentCheckout, newTerminalIn, agents
   const sub = dm ? agent?.description || (agent ? null : JUNIOR_LINE) : null
   const about = () => (onAbout ? onAbout() : chatSide.toggle(current.id, 'agent'))
   const mood = state === 'needs' ? 'needs' : state === 'working' ? 'working' : state === 'error' ? 'stuck' : 'hello'
+  const status = line && (
+    <span className={`chStatus ${state}`} title={line} aria-live="polite">
+      <span className="d" aria-hidden="true" />
+      <span className="t">{line}</span>
+      {state === 'working' && todo && todo.of > 1 && (
+        <span className="n">
+          {todo.n}/{todo.of}
+        </span>
+      )}
+    </span>
+  )
   return (
-    <div id="chatHeader" ref={chatHeaderRef} className={`chTop${dm ? ' dm' : ''}`}>
-      {dm ? (
+    <div id="chatHeader" ref={chatHeaderRef} className={`chTop${dm ? ' dm' : ''}${floating ? ' float' : ''}`}>
+      {/* Floating, an agent's own chat: its tab already carries its face and name, so nothing repeats them here; About moves to the tools. */}
+      {dm && floating ? null : dm ? (
         <button type="button" className={`chWho${side === 'agent' ? ' on' : ''}`} title={`About ${label}`} aria-label={`About ${label}`} onClick={about}>
           <JuniorFace size={36} motion="still" mood={mood} colour={colour} decorative />
           <span className="chNames">
@@ -150,23 +165,15 @@ function TopBar({ current, chatHeaderRef, currentCheckout, newTerminalIn, agents
           </span>
         </span>
       )}
+      {/* Floating: what it is doing sits with who is doing it, on the left. */}
+      {floating && status}
       <span className="chRight">
-        {line && (
-          <span className={`chStatus ${state}`} title={line} aria-live="polite">
-            <span className="d" aria-hidden="true" />
-            <span className="t">{line}</span>
-            {state === 'working' && todo && todo.of > 1 && (
-              <span className="n">
-                {todo.n}/{todo.of}
-              </span>
-            )}
-          </span>
-        )}
+        {!floating && status}
         <SessionCost sessionId={current.id} status={current.status} workflows={current.workflows} kind={current.kind} bar />
         {/* A thread (any chat that is not a DM) pins to the sidebar from here. */}
         {!dm && <PinThreadButton id={current.id} pinned={!!current.pinned} />}
         <span className="chSep" aria-hidden="true" />
-        <ChatTools current={current} checkout={currentCheckout} newTerminalIn={newTerminalIn} agents={agents} browserOpen={browserOpen} onAbout={dm ? undefined : about} />
+        <ChatTools current={current} checkout={currentCheckout} newTerminalIn={newTerminalIn} agents={agents} browserOpen={browserOpen} onAbout={dm && !floating ? undefined : about} />
       </span>
     </div>
   )
