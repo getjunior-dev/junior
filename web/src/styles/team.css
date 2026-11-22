@@ -326,7 +326,13 @@ button.threadCard:hover { background: var(--card); }
    the workspaces sit on the right, then the system icons. The bar's base line is drawn inside it, so
    the tab in front covers it and runs into the page, as it does in a band of its own. */
 .teamBar.oneRow { gap: 0; border-bottom: 0; box-shadow: inset 0 -1px 0 var(--hair); background: var(--deep); }
-.teamBar.oneRow > .tbBand { flex: 1; min-width: 0; align-self: stretch; display: flex; }
-.teamBar.oneRow .tbBand .tabband { flex: 1; min-width: 0; height: 100%; background: transparent; box-shadow: none; }
-.teamBar.oneRow > .tbWs { flex: none; min-width: 0; height: 28px; display: flex; align-items: center; padding-left: 10px; margin-right: 6px; border-left: 1px solid var(--hair); }
-.teamBar.oneRow .tbWs .wsTabs { margin-left: 0; justify-content: flex-end; }
+.teamBar.oneRow > .tbBand, .desktopBar.team .tbBand { flex: 1; min-width: 0; align-self: stretch; display: flex; }
+.topbar .tbBand .tabband { flex: 1; min-width: 0; height: 100%; background: transparent; box-shadow: none; }
+.teamBar.oneRow > .tbWs, .desktopBar.team .tbWs { flex: none; min-width: 0; align-self: center; height: 28px; display: flex; align-items: center; gap: 2px; padding-left: 10px; margin-right: 6px; border-left: 1px solid var(--hair); }
+.topbar .tbWs .wsTabs { margin-left: 0; justify-content: flex-end; }
+/* Junior.app: the same row in its title bar. The lit rule under the bar would cross the tab in front,
+   so the base line is drawn inside the bar here too. Tabs and buttons take clicks; the gaps between
+   them, and the strip's empty end, still drag the window. */
+.desktopBar.team { border-bottom: 0; box-shadow: inset 0 -1px 0 var(--hair); }
+.desktopBar.team::after { display: none; }
+.desktopBar.team .dbMain { padding: 0; gap: 0; align-items: stretch; }

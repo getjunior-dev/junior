@@ -18,7 +18,7 @@ import { appTabsHost, useBrowserTabs, WorkspaceTabs } from './WorkspaceTabs.js'
 /** Up to this many workspaces the strip is as wide as its tiles and never folds any; past it, it gets a share of the bar and folds the rest into +N. */
 const FEW_WORKSPACES = 6
 
-/** Where the team layout's page tabs go when the top bar hosts them (the browser; Junior.app keeps them under its bar). */
+/** Where the team layout's page tabs go: a slot in the top bar, in the browser and in Junior.app. */
 export const TOP_BAND_SLOT = 'topBandSlot'
 
 type Props = {
@@ -127,7 +127,16 @@ export function TopBar({
         team={team}
         switcher={
           strip ? (
-            <WorkspaceTabs state={tabs} host={appTabsHost!} workspaces={workspaces} onNew={onNewWorkspace} onSettings={onWorkspaceSettings} trailing={badge} />
+            <WorkspaceTabs
+              state={tabs}
+              host={appTabsHost!}
+              workspaces={workspaces}
+              onNew={onNewWorkspace}
+              onSettings={onWorkspaceSettings}
+              trailing={badge}
+              // Team layout: the strip sits on the right, as wide as its tabs, so it has no width of its own to measure.
+              room={team && tabs.tabs.length <= FEW_WORKSPACES ? 10_000 : undefined}
+            />
           ) : (
           <WorkspaceSwitcher
             labelled
@@ -140,7 +149,9 @@ export function TopBar({
           )
         }
         badge={strip ? null : badge}
-        system={<SystemIcons workspace={current} conn={conn} onOpenSystem={onOpenSystem} onOpenSettings={onOpenSettings} settingsOpen={settingsOpen} onHelp={onHelp} noSettings={!!team} />}
+        wide={!!team && !!strip && tabs.tabs.length > FEW_WORKSPACES}
+        // Team layout: phone, status and help are at the foot of the sidebar (App passes SystemIcons there).
+        system={team ? null : <SystemIcons workspace={current} conn={conn} onOpenSystem={onOpenSystem} onOpenSettings={onOpenSettings} settingsOpen={settingsOpen} onHelp={onHelp} />}
       />
     )
   }
@@ -318,6 +329,7 @@ function DesktopBar({
   switcher,
   badge,
   system,
+  wide,
 }: {
   panelCollapsed: boolean
   onTogglePanel: () => void
@@ -325,6 +337,8 @@ function DesktopBar({
   switcher: ReactNode
   badge: ReactNode
   system: ReactNode
+  /** team layout, many workspaces: their zone takes a share of the bar and folds the rest */
+  wide?: boolean
 }) {
   const nav = useDesktopNav()
   const hidden = team ? !team.sidebarOpen : panelCollapsed
@@ -354,12 +368,23 @@ function DesktopBar({
           <ChevronRight size={16} aria-hidden="true" />
         </button>
       </div>
-      <div className="dbMain">
-        {switcher}
-        {badge}
-        <span className="spacer" />
-        {system}
-      </div>
+      {team ? (
+        // One row, as in the browser: the agent's tabs (App portals its TabBand in here) from the sidebar's edge, the workspaces on the right.
+        <div className="dbMain">
+          <div id={TOP_BAND_SLOT} className="tbBand" />
+          <div className="tbWs" style={wide ? { width: '46%' } : undefined}>
+            {switcher}
+            {badge}
+          </div>
+        </div>
+      ) : (
+        <div className="dbMain">
+          {switcher}
+          {badge}
+          <span className="spacer" />
+          {system}
+        </div>
+      )}
     </header>
   )
 }

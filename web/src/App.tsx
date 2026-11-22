@@ -686,9 +686,9 @@ export function App() {
   // An agent's DM lives on the Agents page, not in the chat list.
   const chatSessions = useMemo(() => sessions.filter((s) => s.kind !== 'brief' && s.kind !== 'goal' && s.kind !== 'dm' && s.teamRun?.role !== 'worker'), [sessions])
   const dmsWaiting = sessions.filter((s) => s.kind === 'dm' && s.waiting).length
-  // The page tabs. In the browser's team layout they ride in the top bar, one row with the workspaces
-  // (TopBar's slot); Junior.app and the classic layout keep them at the top of the page.
-  const bandInBar = team && !isDesktop
+  // The page tabs. In the team layout they ride in the top bar, one row with the workspaces (TopBar's
+  // slot), in the browser and in Junior.app; the classic layout keeps them at the top of the page.
+  const bandInBar = team
   const [bandSlot, setBandSlot] = useState<HTMLElement | null>(null)
   useLayoutEffect(() => {
     setBandSlot(bandInBar ? document.getElementById(TOP_BAND_SLOT) : null)
