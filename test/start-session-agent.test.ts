@@ -9,6 +9,7 @@ const agent = (slug: string, label: string): ChatAgent => ({
   label,
   description: '',
   colour: null,
+  shape: null,
   ask: null,
   starters: null,
   model: null,

@@ -446,7 +446,7 @@ export function ChatComposer({ draft, onChange, onCreate, error, step, top, plac
           onClaude
             ? (hover) => (
                 <>
-                  <JuniorFace mood={hover ? 'listen' : 'hello'} size={18} motion="wander" look={{ x: 0, y: 0 }} colour={agentInfo?.colour ?? undefined} decorative />
+                  <JuniorFace mood={hover ? 'listen' : 'hello'} size={18} motion="wander" look={{ x: 0, y: 0 }} colour={agentInfo?.colour ?? undefined} shape={agentInfo?.shape ?? undefined} decorative />
                   <span>Send</span>
                   <kbd aria-hidden="true">↵</kbd>
                 </>

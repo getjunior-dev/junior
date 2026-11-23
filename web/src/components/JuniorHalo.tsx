@@ -25,7 +25,7 @@ export function JuniorHalo({ mood, spin, look = null, agent }: Props) {
         <i />
       </span>
       <span className={spin ? 'bob' : ''}>
-        <JuniorFace mood={mood} size={118} motion="follow" look={look} colour={agent?.colour ?? undefined} />
+        <JuniorFace mood={mood} size={118} motion="follow" look={look} colour={agent?.colour ?? undefined} shape={agent?.shape ?? undefined} />
       </span>
     </span>
   )

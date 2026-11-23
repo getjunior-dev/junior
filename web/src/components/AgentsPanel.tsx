@@ -15,6 +15,7 @@ import { shownStatus } from '../sessionModes.js'
 import { PanelSearch } from './ContextPanel.js'
 import { JuniorFace } from './JuniorFace.js'
 import { useState } from 'react'
+import type { Shape } from '../../../core/junior/shapes.js'
 
 type Props = {
   /** the DM key on screen (`junior`, `junior:explainer`) */
@@ -25,7 +26,7 @@ type Props = {
   onSearch: () => void
 }
 
-type Row = { key: string; label: string; description: string; colour?: string }
+type Row = { key: string; label: string; description: string; colour?: string; shape?: Shape }
 
 export function AgentsPanel({ current, onOpen, onPin, onSearch }: Props) {
   const persona = usePersona()
@@ -33,7 +34,7 @@ export function AgentsPanel({ current, onOpen, onPin, onSearch }: Props) {
   const sessions = useSessions()
   const rows: Row[] = [
     { key: JUNIOR_DM, label: persona.name, description: 'Your junior engineer' },
-    ...agents.map((a) => ({ key: dmKey(a.name), label: a.label, description: a.description, colour: a.colour ?? undefined })),
+    ...agents.map((a) => ({ key: dmKey(a.name), label: a.label, description: a.description, colour: a.colour ?? undefined, shape: a.shape ?? undefined })),
   ]
   return (
     <aside className="panel" aria-label="Agents">
@@ -85,7 +86,7 @@ function AgentRow({ row, dm, active, onOpen, onPin }: { row: Row; dm: SessionSum
       }}
     >
       <span className="lead" aria-hidden="true">
-        <JuniorFace size={36} motion={hover ? 'follow' : 'still'} mood={hover ? 'done' : needs ? 'needs' : working ? 'working' : 'hello'} colour={row.colour} decorative />
+        <JuniorFace size={36} motion={hover ? 'follow' : 'still'} mood={hover ? 'done' : needs ? 'needs' : working ? 'working' : 'hello'} colour={row.colour} shape={row.shape} decorative />
       </span>
       <span className="t">
         <span className="nm">{row.label}</span>

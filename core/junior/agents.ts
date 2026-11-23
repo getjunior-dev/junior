@@ -10,6 +10,7 @@
  *   label: Explainer
  *   description: Teaches code from the outside in.
  *   color: blue
+ *   face: cloud
  *   chat: true
  *   skills: book, indian-mode
  *   tools: Read, Grep, Glob
@@ -30,6 +31,7 @@
  * faces and names with it.
  */
 import { bodyOf, readFields } from '../../shared/skillFile.js'
+import { isShape, type Shape } from './shapes.js'
 
 export type ChatAgent = {
   /** what the session stores and Claude calls it: `junior:explainer`, `explainer` */
@@ -41,6 +43,8 @@ export type ChatAgent = {
   description: string
   /** the face's colour (`#rrggbb`), or null to wear the persona's */
   colour: string | null
+  /** the face's body (`face:`, core/junior/shapes.ts), or null to wear the persona's */
+  shape: Shape | null
   /** the model the agent asks for; null = the chat's own pick */
   model: string | null
   /** its question on a new chat ("What's broken?"); null = its starter's, or the generic one (agentOpener) */
@@ -83,6 +87,12 @@ export function agentFace(color: string | undefined | null): string | null {
   const c = (color ?? '').trim().toLowerCase()
   if (/^#[0-9a-f]{6}$/.test(c)) return c
   return AGENT_FACE[c] ?? null
+}
+
+/** A face shape from an agent file's `face`; null = the persona's. */
+export function agentShape(face: string | undefined | null): Shape | null {
+  const f = (face ?? '').trim().toLowerCase()
+  return isShape(f) ? f : null
 }
 
 /** The built-in tools an agent's `tools` line can take away. Everything else a chat has stays. */
@@ -154,6 +164,7 @@ export function chatAgentFrom(text: string, at: { name: string; slug: string; pa
     label: (f.label ?? '').trim().slice(0, 40) || labelOf(f.name || at.slug),
     description: (f.description ?? '').trim(),
     colour: agentFace(f.color),
+    shape: agentShape(f.face),
     ask: (f.ask ?? '').trim().slice(0, 80) || null,
     starters: starterList(f.starters),
     model: model && model !== 'inherit' ? model : null,

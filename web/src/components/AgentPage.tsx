@@ -80,7 +80,7 @@ export function AgentPage({ name, onNavigate }: { name: string; onNavigate: (has
     <div className="page agentPage">
       <div className="inner">
         <header className="agHead">
-          <JuniorFace mood="hello" size={64} motion="follow" colour={agent.colour ?? undefined} decorative />
+          <JuniorFace mood="hello" size={64} motion="follow" colour={agent.colour ?? undefined} shape={agent.shape ?? undefined} decorative />
           <div className="agWho">
             <h1>{agent.label}</h1>
             <p>{agent.description || `One of ${persona.name}'s agents.`}</p>

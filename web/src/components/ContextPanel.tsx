@@ -480,7 +480,7 @@ function SessionRow({ session: s, active, renaming, onSelect, onStartRename, onE
     </span>
   ) : agent ? (
     <span className="lead" aria-hidden="true">
-      <JuniorFace size={14} motion="still" colour={agent.colour ?? undefined} className="rowAgent" decorative />
+      <JuniorFace size={14} motion="still" colour={agent.colour ?? undefined} shape={agent.shape ?? undefined} className="rowAgent" decorative />
     </span>
   ) : null
 

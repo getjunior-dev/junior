@@ -121,7 +121,7 @@ export function ThreadCard({ id, fallbackTitle, attached = 0 }: { id: string; fa
     <ThreadPinMenu id={id} pinned={pinned}>
       <div className={`threadCard ${state}${pinned ? ' pinned' : ''}`}>
         <button type="button" className="tcMain" onClick={() => open(id)}>
-          <JuniorFace mood={state === 'you' ? 'needs' : state === 'working' ? 'working' : state === 'stopped' ? 'stuck' : 'hello'} size={28} motion="still" colour={agent?.colour ?? undefined} decorative />
+          <JuniorFace mood={state === 'you' ? 'needs' : state === 'working' ? 'working' : state === 'stopped' ? 'stuck' : 'hello'} size={28} motion="still" colour={agent?.colour ?? undefined} shape={agent?.shape ?? undefined} decorative />
           <span className="tcT">
             <b>{s.title}</b>
             <span>

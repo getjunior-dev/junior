@@ -60,7 +60,7 @@ export function AgentPicker({ agent, onChange, disabled }: { agent?: string; onC
           title={picked ? `${persona.name} · ${picked.label}: ${picked.description}` : `Talk to ${persona.name}, or one of its agents`}
           aria-label={`Talk to: ${persona.name}${picked ? ` · ${picked.label}` : ''}`}
         >
-          <JuniorFace size={15} motion="still" colour={picked?.colour ?? undefined} decorative />
+          <JuniorFace size={15} motion="still" colour={picked?.colour ?? undefined} shape={picked?.shape ?? undefined} decorative />
           <span className="name">{picked ? picked.label : persona.name}</span>
           <ChevronDown size={11} aria-hidden="true" />
         </button>
@@ -117,7 +117,7 @@ export function AgentPicker({ agent, onChange, disabled }: { agent?: string; onC
                     onPointerMove={() => setAt(i)}
                     onClick={() => pick(a)}
                   >
-                    <JuniorFace size={22} motion="still" colour={a?.colour ?? undefined} decorative />
+                    <JuniorFace size={22} motion="still" colour={a?.colour ?? undefined} shape={a?.shape ?? undefined} decorative />
                     <span className="agText">
                       <span className="n">{a ? a.label : persona.name}</span>
                       <span className="d">{a ? a.description || a.scope : 'Every skill and tool'}</span>

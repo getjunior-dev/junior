@@ -387,9 +387,9 @@ export const JuniorFace = memo(function JuniorFace({ mood = 'hello', size = 40, 
       <g data-part="key">
         <g data-part="front">
           <g transform={body.frame}>
-            <path d={body.front} fill={body.top ? p.body : p.top} />
+            <path d={body.front} fill={p.body} />
+            <path d={body.top} transform={body.topFrame} fill={p.top} />
           </g>
-          {body.top && <path d={body.top} fill={p.top} />}
         </g>
         <g data-part="face">
           {[0, 1].map((i) => <rect key={`e${i}`} data-part="eye" fill={p.eye} />)}

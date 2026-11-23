@@ -1,10 +1,11 @@
 /**
- * Junior's body shapes (Settings → About me → Shape). The key is the brand's
+ * Junior's body shapes (Settings → About me → Shape, and a teammate's `face:`). The key is the brand's
  * (brand v2, .docs/junior-goals-teams/junior-brand-v2.html): skirt, body and
  * top, drawn in its 128-unit grid (viewBox 8 10 112 112), eyes at y 55, x 49
  * and 79. The others are the older slab-era outlines in their own grid
  * (-4 -4 112 110, eyes at y≈56, x 37 and 63), placed onto the key's grid by
- * `frame`; their darker underside is the front nudged down and right.
+ * `frame`; their darker underside is the front nudged down and right, their
+ * lighter plate the front shrunk about the face.
  * Pure and browser-safe.
  */
 
@@ -62,12 +63,16 @@ const KEY = { back: squircle(64, 70, 54, 48), front: squircle(64, 62, 54, 48), t
 /** The older outlines onto the key's grid: their eyes (37/63, 56) land on the key's (49/79, 55). */
 const OLD_FRAME = 'translate(6.3 -9.6) scale(1.154)'
 
+/** The lighter plate on an older outline: its own front, shrunk about the face so the eyes and mouth sit on it, like the key's top. */
+const PLATE = 'translate(50 52) scale(0.78) translate(-50 -52)'
+
 /**
- * What the face draws for a shape: its underside, its front, the key's lighter
- * top (the key only), and the transform that puts it on the key's grid.
+ * What the face draws for a shape: its underside, its front, its lighter top
+ * (the key's own, or the outline's front shrunk by `topFrame`), and the
+ * transform that puts it on the key's grid.
  */
-export function shapePaths(shape: Shape): { back: string; front: string; top?: string; frame?: string } {
+export function shapePaths(shape: Shape): { back: string; front: string; top: string; frame?: string; topFrame?: string } {
   const s = isShape(shape) ? shape : DEFAULT_SHAPE
   if (s === 'key') return { ...KEY }
-  return { front: FRONT[s], back: s === 'slab' ? SLAB_BACK : nudge(FRONT[s], DEPTH.x, DEPTH.y), frame: OLD_FRAME }
+  return { front: FRONT[s], back: s === 'slab' ? SLAB_BACK : nudge(FRONT[s], DEPTH.x, DEPTH.y), top: FRONT[s], frame: OLD_FRAME, topFrame: PLATE }
 }

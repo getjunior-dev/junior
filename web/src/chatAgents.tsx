@@ -9,6 +9,7 @@ import type { ChatAgent } from '../../core/junior/agents.js'
 import { agentTitle } from '../../core/junior/agents.js'
 import { usePersona } from './junior.js'
 import { store } from './store.js'
+import type { Shape } from '../../core/junior/shapes.js'
 
 let agents: ChatAgent[] = []
 let started = false
@@ -52,8 +53,8 @@ export function SessionAgentScope({ agent, children }: { agent?: string; childre
 }
 
 /** Inside a session: its agent's face colour (undefined = the persona's) and "Junior · Reviewer". */
-export function useScopedAgent(): { agent: ChatAgent | null; colour: string | undefined; name: string } {
+export function useScopedAgent(): { agent: ChatAgent | null; colour: string | undefined; shape: Shape | undefined; name: string } {
   const agent = useContext(Scope)
   const persona = usePersona()
-  return { agent, colour: agent?.colour ?? undefined, name: agentTitle(persona.name, agent?.label) }
+  return { agent, colour: agent?.colour ?? undefined, shape: agent?.shape ?? undefined, name: agentTitle(persona.name, agent?.label) }
 }

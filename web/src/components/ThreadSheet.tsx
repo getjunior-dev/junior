@@ -97,7 +97,7 @@ export function ThreadSheet({ sessionId, onClose, onFull, onNavigate }: Props) {
         />
       )}
       <header className="tshHead">
-        <JuniorFace mood={state === 'you' ? 'needs' : state === 'working' ? 'working' : state === 'stopped' ? 'stuck' : 'hello'} size={36} motion="wander" colour={agent?.colour ?? undefined} decorative />
+        <JuniorFace mood={state === 'you' ? 'needs' : state === 'working' ? 'working' : state === 'stopped' ? 'stuck' : 'hello'} size={36} motion="wander" colour={agent?.colour ?? undefined} shape={agent?.shape ?? undefined} decorative />
         <span className="tshT">
           <b>{s.title}</b>
           <span>

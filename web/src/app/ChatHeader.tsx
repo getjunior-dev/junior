@@ -67,12 +67,12 @@ type HeaderProps = {
 export function ChatHeader(props: HeaderProps) {
   const { current, chatHeaderRef, currentCheckout, newTerminalIn, agents, openAgent, showAgent, mobile, onNavigate, onRename, onDelete } = props
   const shown = shownStatus(current)
-  const { colour, name } = useScopedAgent()
+  const { colour, shape, name } = useScopedAgent()
   if (!mobile) return <TopBar {...props} />
   return (
     <div id="chatHeader" ref={chatHeaderRef}>
       <span className="chFace" title={name}>
-        <JuniorFace size={18} motion="still" colour={colour} decorative />
+        <JuniorFace size={18} motion="still" colour={colour} shape={shape} decorative />
       </span>
       {current.kind === 'dm' ? (
         <span id="chatTitle" title={current.title}>
@@ -110,7 +110,7 @@ const upperFirst = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
 function TopBar({ current, chatHeaderRef, currentCheckout, newTerminalIn, agents, browserOpen, onAbout, onRename, onDelete, floating = false }: HeaderProps) {
   const dm = current.kind === 'dm'
   const shown = shownStatus(current)
-  const { agent, colour } = useScopedAgent()
+  const { agent, colour, shape } = useScopedAgent()
   const persona = usePersona()
   const side = useChatSide(current.id)
   const events = useEvents(current.id)
@@ -151,7 +151,7 @@ function TopBar({ current, chatHeaderRef, currentCheckout, newTerminalIn, agents
       {/* Floating, an agent's own chat: its tab already carries its face and name, so nothing repeats them here; About moves to the tools. */}
       {dm && floating ? null : dm ? (
         <button type="button" className={`chWho${side === 'agent' ? ' on' : ''}`} title={`About ${label}`} aria-label={`About ${label}`} onClick={about}>
-          <JuniorFace size={36} motion="still" mood={mood} colour={colour} decorative />
+          <JuniorFace size={36} motion="still" mood={mood} colour={colour} shape={shape} decorative />
           <span className="chNames">
             <span className="chName">
               {label !== persona.name && (
@@ -167,7 +167,7 @@ function TopBar({ current, chatHeaderRef, currentCheckout, newTerminalIn, agents
         </button>
       ) : (
         <span className="chWho thread">
-          <JuniorFace size={20} motion="still" mood={mood} colour={colour} decorative />
+          <JuniorFace size={20} motion="still" mood={mood} colour={colour} shape={shape} decorative />
           <span className="chNames">
             <ThreadTitle session={current} onRename={onRename} onDelete={onDelete} className="chName" />
           </span>

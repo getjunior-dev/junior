@@ -10,7 +10,8 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { agentAppend, agentDisallowed, agentFace, agentOpener, agentTitle, chatAgentFrom } from '../core/junior/agents.js'
+import { agentAppend, agentDisallowed, agentFace, agentOpener, agentShape, agentTitle, chatAgentFrom } from '../core/junior/agents.js'
+import { SHAPES } from '../core/junior/shapes.js'
 import { seedChatAgents } from '../server/chat-agents.js'
 import { listChatAgents, type LibraryRoot } from '../server/library.js'
 
@@ -42,6 +43,24 @@ test('faces: named colours and hex, but never orange', () => {
   assert.equal(agentFace('orange'), null)
   assert.equal(agentFace('chartreuse'), null)
   assert.equal(agentFace(undefined), null)
+})
+
+test('a face: line picks the body; anything else wears the persona', () => {
+  assert.equal(agentShape('Cloud'), 'cloud')
+  assert.equal(agentShape(' ghost '), 'ghost')
+  assert.equal(agentShape('hexagon'), null)
+  assert.equal(agentShape(undefined), null)
+  const a = chatAgentFrom('---\nname: flake\nface: pill\nchat: true\n---\nhi', { name: 'flake', slug: 'flake', path: '/x/flake.md', scope: 'Workspace' })
+  assert.equal(a?.shape, 'pill')
+})
+
+test("Junior's agent-file instructions name every teammate shape, and not the key", async () => {
+  const text = await readFile(new URL('../shared/juniorContext.ts', import.meta.url), 'utf8')
+  const line = text.slice(text.indexOf('a \\`face\\`'), text.indexOf('the key is yours alone'))
+  for (const [shape] of SHAPES) {
+    if (shape === 'key') assert.ok(!line.includes('key,'), 'the key is Junior’s')
+    else assert.ok(line.includes(shape), `${shape} is offered`)
+  }
 })
 
 test('tools only narrow: the gated built-ins it leaves out are taken away, nothing is added', () => {

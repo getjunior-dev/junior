@@ -190,7 +190,7 @@ function AgentAbout({ session, onNavigate }: { session: SessionSummary; onNaviga
   const list = (xs: string[] | null, all: string) => (xs ? xs.join(', ') : all)
   return (
     <div className="csAbout">
-      <JuniorFace size={56} motion="still" colour={agent.colour ?? undefined} decorative />
+      <JuniorFace size={56} motion="still" colour={agent.colour ?? undefined} shape={agent.shape ?? undefined} decorative />
       <div className="nm">{agentTitle(persona.name, agent.label)}</div>
       {agent.description && <p>{agent.description}</p>}
       <dl>

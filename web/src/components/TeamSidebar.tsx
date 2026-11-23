@@ -23,6 +23,7 @@ import { ThreadPinMenu } from './PinThread.js'
 import { STATE_WORDS } from './ThreadCards.js'
 import { relTime } from '../itemUi.js'
 import { MOD_LABEL } from '../keys.js'
+import type { Shape } from '../../../core/junior/shapes.js'
 
 export type SidebarPlace = 'junior' | 'tasks' | 'prs' | 'artifacts' | 'jobs' | 'usage' | 'settings' | { agent: string } | { thread: string } | null
 
@@ -106,9 +107,9 @@ export function TeamSidebar(p: Props) {
     const byName = new Map(agents.map((a) => [a.name, a]))
     return (agent?: string) => (agent ? byName.get(agent)?.label ?? agent : persona.name)
   }, [agents, persona.name])
-  const colourOf = useMemo(() => {
-    const byName = new Map(agents.map((a) => [a.name, a.colour]))
-    return (agent?: string) => (agent ? byName.get(agent) ?? undefined : undefined)
+  const faceOf = useMemo(() => {
+    const byName = new Map(agents.map((a) => [a.name, { colour: a.colour ?? undefined, shape: a.shape ?? undefined }]))
+    return (agent?: string) => (agent ? byName.get(agent) : undefined) ?? {}
   }, [agents])
 
   const threads = useMemo(() => openThreads(p.sessions, now), [p.sessions, now])
@@ -225,7 +226,7 @@ export function TeamSidebar(p: Props) {
             </div>
             {pinned.map((t) => (
               <ThreadPinMenu key={t.id} id={t.id} pinned>
-                <PinnedRow t={t} agentLabel={labelOf(t.agent)} colour={colourOf(t.agent)} active={isActive({ thread: t.id })} onOpen={() => p.onThread(t.id)} />
+                <PinnedRow t={t} agentLabel={labelOf(t.agent)} {...faceOf(t.agent)} active={isActive({ thread: t.id })} onOpen={() => p.onThread(t.id)} />
               </ThreadPinMenu>
             ))}
           </section>
@@ -240,7 +241,7 @@ export function TeamSidebar(p: Props) {
             </div>
             {shownThreads.map((t) => (
               <ThreadPinMenu key={t.id} id={t.id} pinned={false}>
-                <ThreadRow t={t} agentLabel={labelOf(t.agent)} colour={colourOf(t.agent)} active={isActive({ thread: t.id })} onOpen={() => p.onThread(t.id)} />
+                <ThreadRow t={t} agentLabel={labelOf(t.agent)} {...faceOf(t.agent)} active={isActive({ thread: t.id })} onOpen={() => p.onThread(t.id)} />
               </ThreadPinMenu>
             ))}
             {waitingRows.length > THREADS_SHOWN && (
@@ -265,6 +266,7 @@ export function TeamSidebar(p: Props) {
             label={r.a.label}
             description={r.a.description}
             colour={r.a.colour ?? undefined}
+            shape={r.a.shape ?? undefined}
             st={r.st}
             state={r.state}
             dm={r.dm}
@@ -339,6 +341,7 @@ function AgentRow(r: {
   label: string
   description: string
   colour?: string
+  shape?: Shape
   st: AgentStatus
   state: AgentState
   dm?: SessionSummary
@@ -366,7 +369,7 @@ function AgentRow(r: {
       onPointerEnter={() => setHover(true)}
       onPointerLeave={() => setHover(false)}
     >
-      <JuniorFace size={22} motion={hover ? 'follow' : 'still'} mood={hover ? 'done' : r.state === 'you' ? 'needs' : r.state === 'working' ? 'working' : 'hello'} colour={r.colour} decorative />
+      <JuniorFace size={22} motion={hover ? 'follow' : 'still'} mood={hover ? 'done' : r.state === 'you' ? 'needs' : r.state === 'working' ? 'working' : 'hello'} colour={r.colour} shape={r.shape} decorative />
       <span className="tsAgT">
         <span className="tsTitle">{r.label}</span>
         {r.state !== 'idle' && <span className={`tsDoing${r.state === 'you' ? ' you' : ''}`}>{r.st.line}</span>}
@@ -435,10 +438,10 @@ function useAgentFolds(): [Record<string, boolean>, (agent: string, open: boolea
   return [folds, set]
 }
 
-type RowProps = { t: Thread; agentLabel: string; colour?: string; active: boolean; onOpen: () => void } & Omit<ComponentProps<'button'>, 'onClick'>
+type RowProps = { t: Thread; agentLabel: string; colour?: string; shape?: Shape; active: boolean; onOpen: () => void } & Omit<ComponentProps<'button'>, 'onClick'>
 
 /** A thread waiting on you: the face of whoever has it, the title, how long it has waited, and who asks. */
-function ThreadRow({ t, agentLabel, colour, active, onOpen, ...rest }: RowProps) {
+function ThreadRow({ t, agentLabel, colour, shape, active, onOpen, ...rest }: RowProps) {
   const [hover, setHover] = useState(false)
   return (
     <button
@@ -451,7 +454,7 @@ function ThreadRow({ t, agentLabel, colour, active, onOpen, ...rest }: RowProps)
       onPointerEnter={() => setHover(true)}
       onPointerLeave={() => setHover(false)}
     >
-      <JuniorFace mood={hover ? 'done' : 'needs'} size={24} motion={hover ? 'follow' : 'still'} colour={colour} decorative />
+      <JuniorFace mood={hover ? 'done' : 'needs'} size={24} motion={hover ? 'follow' : 'still'} colour={colour} shape={shape} decorative />
       <span className="tsT">
         <span className="tsL1">
           {t.job && <Clock size={11} className="tsJob" aria-label="a job's run" />}
@@ -470,7 +473,7 @@ function ThreadRow({ t, agentLabel, colour, active, onOpen, ...rest }: RowProps)
  * A pinned thread: whoever has it, the title, and where it stands. Needs you: the orange dot. Working:
  * the typing dots. Finished: dimmed, and it stays until you unpin it.
  */
-function PinnedRow({ t, agentLabel, colour, active, onOpen, ...rest }: RowProps) {
+function PinnedRow({ t, agentLabel, colour, shape, active, onOpen, ...rest }: RowProps) {
   const [hover, setHover] = useState(false)
   const mood = hover ? 'done' : t.state === 'you' ? 'needs' : t.state === 'working' ? 'working' : t.state === 'stopped' ? 'stuck' : 'hello'
   return (
@@ -485,7 +488,7 @@ function PinnedRow({ t, agentLabel, colour, active, onOpen, ...rest }: RowProps)
       onPointerLeave={() => setHover(false)}
     >
       <span className={`tsRing${t.state === 'you' ? ' you' : ''}`}>
-        <JuniorFace mood={mood} size={24} motion={hover ? 'follow' : 'still'} colour={colour} decorative />
+        <JuniorFace mood={mood} size={24} motion={hover ? 'follow' : 'still'} colour={colour} shape={shape} decorative />
       </span>
       <span className="tsT">
         <span className="tsL1">
