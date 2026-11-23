@@ -18,6 +18,8 @@ struct Workspace: Identifiable, Equatable {
 struct SessionSummary: Identifiable, Equatable {
     let id: String
     let title: String
+    /// its handle (`/rename`, or what start_session named it)
+    let name: String?
     let cwd: String
     /// starting | idle | running | error
     let status: String
@@ -39,6 +41,7 @@ struct SessionSummary: Identifiable, Equatable {
         guard let j, let id = j["id"]?.string else { return nil }
         self.id = id
         title = j["title"]?.string ?? "Untitled"
+        name = j["name"]?.string
         cwd = j["cwd"]?.string ?? ""
         status = j["status"]?.string ?? "idle"
         kind = j["kind"]?.string

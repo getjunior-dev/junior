@@ -10,11 +10,11 @@ struct RootView: View {
         ZStack {
             Theme.canvas.ignoresSafeArea()
             if let client {
-                MainView(client: client, onForget: { forget(notice: nil) })
+                TeamView(client: client, onForget: { forget(notice: nil) })
                     .onChange(of: client.unpaired) { _, gone in
                         if gone { forget(notice: "This phone is no longer paired. Scan the new QR code on your Mac.") }
                     }
-            } else {
+            } else if link == nil {
                 PairView(notice: notice) { url in
                     Keychain.save(url)
                     notice = nil
@@ -54,25 +54,6 @@ struct RootView: View {
         }
         #endif
         return nil
-    }
-}
-
-struct MainView: View {
-    let client: JuniorClient
-    var onForget: () -> Void
-
-    var body: some View {
-        NavigationStack {
-            List(client.sessions.filter { $0.kind == "dm" }) { s in
-                NavigationLink(value: s.id) { Text(s.title).font(Theme.sans(15)) }
-                    .listRowBackground(Theme.canvas)
-            }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background(Theme.canvas)
-            .toolbar { ToolbarItem(placement: .topBarLeading) { WorkspaceMenu(client: client, onForget: onForget) } }
-            .navigationDestination(for: String.self) { id in ChatView(client: client, sessionId: id) }
-        }
     }
 }
 

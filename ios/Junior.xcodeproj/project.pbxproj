@@ -7,11 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		025FE4B73D77B0AA928CA42E /* DMView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C6BAC5B55846A2BA187816C /* DMView.swift */; };
 		12EA313EBE5E215BD4EC0E2E /* JuniorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48E535C83C20EE6295981274 /* JuniorApp.swift */; };
 		14F6FBF748D2874C06F24C1C /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22F46B300F2D2FF2D432564B /* Theme.swift */; };
 		1589E754C0B3BADCE17A105B /* VarelaRound-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 5CDA5E4EB422AF4662ACCA2B /* VarelaRound-Regular.ttf */; };
 		20CA9FE10B2613DF8DB9F660 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19894795281C5851597F6F0E /* RootView.swift */; };
 		26CA52731DED5B97A4D13FAA /* Composer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE9AB97F9F6B069C851B71FE /* Composer.swift */; };
+		62FD3ABE1993E3B76BAE20A0 /* ThreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3736D34139C737C028C50937 /* ThreadView.swift */; };
 		682C96D8C4262A171C0E20D5 /* GeistMono.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 1BDDE7E040DAFE97406B65A6 /* GeistMono.ttf */; };
 		71FFE8EBB81DFA10D9FBFAD4 /* PairView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 515784591FAC130C3D1D3B2F /* PairView.swift */; };
 		874E1A6F8CC8FC6D4CF3CCFA /* Transcript.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16E076F97FF7235AB5655DCD /* Transcript.swift */; };
@@ -26,6 +28,7 @@
 		EF4E83FC06904B873CCD74B9 /* MarkdownText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A933BB97C3A7174846DF929 /* MarkdownText.swift */; };
 		EF992357CEC21958CD517D5A /* Face.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C54D0BD13D02196F8A9CC30 /* Face.swift */; };
 		F9B607E4455FC4EF6942BE9C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 553CF133DBCAEEA2865554D1 /* Assets.xcassets */; };
+		F9E86457690385B7A5005FD5 /* TeamView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 648D15C60BA56FAA84BFD442 /* TeamView.swift */; };
 		FB580D6493B4C8C51FA32F3A /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0E7CAB680EBF22958D973EA /* Models.swift */; };
 /* End PBXBuildFile section */
 
@@ -36,6 +39,7 @@
 		19894795281C5851597F6F0E /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		1BDDE7E040DAFE97406B65A6 /* GeistMono.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = GeistMono.ttf; sourceTree = "<group>"; };
 		22F46B300F2D2FF2D432564B /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		3736D34139C737C028C50937 /* ThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreadView.swift; sourceTree = "<group>"; };
 		3E2E4CC5193B194A1CC7FF23 /* Client.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Client.swift; sourceTree = "<group>"; };
 		48E535C83C20EE6295981274 /* JuniorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JuniorApp.swift; sourceTree = "<group>"; };
 		4952739928DB8B328DC8BD36 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
@@ -43,8 +47,10 @@
 		553CF133DBCAEEA2865554D1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		5CDA5E4EB422AF4662ACCA2B /* VarelaRound-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "VarelaRound-Regular.ttf"; sourceTree = "<group>"; };
 		610523530A5F6B053FC0C62B /* PromptCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptCard.swift; sourceTree = "<group>"; };
+		648D15C60BA56FAA84BFD442 /* TeamView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamView.swift; sourceTree = "<group>"; };
 		65A231E5D87E1715719F6E00 /* Junior.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Junior.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		745B796D743B86F85DC419B9 /* Pairing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pairing.swift; sourceTree = "<group>"; };
+		7C6BAC5B55846A2BA187816C /* DMView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DMView.swift; sourceTree = "<group>"; };
 		8713DFA825C167D2E664973B /* Geist.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Geist.ttf; sourceTree = "<group>"; };
 		8FFE358A129AC7C7E959EB00 /* ScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerView.swift; sourceTree = "<group>"; };
 		9C54D0BD13D02196F8A9CC30 /* Face.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Face.swift; sourceTree = "<group>"; };
@@ -70,6 +76,7 @@
 				4952739928DB8B328DC8BD36 /* ChatView.swift */,
 				3E2E4CC5193B194A1CC7FF23 /* Client.swift */,
 				EE9AB97F9F6B069C851B71FE /* Composer.swift */,
+				7C6BAC5B55846A2BA187816C /* DMView.swift */,
 				9C54D0BD13D02196F8A9CC30 /* Face.swift */,
 				AD486DEF3FB67750D8B1B8F4 /* FaceShapes.swift */,
 				C38DBC42C8AF7CA1B6D3C3C0 /* Info.plist */,
@@ -82,7 +89,9 @@
 				610523530A5F6B053FC0C62B /* PromptCard.swift */,
 				19894795281C5851597F6F0E /* RootView.swift */,
 				8FFE358A129AC7C7E959EB00 /* ScannerView.swift */,
+				648D15C60BA56FAA84BFD442 /* TeamView.swift */,
 				22F46B300F2D2FF2D432564B /* Theme.swift */,
+				3736D34139C737C028C50937 /* ThreadView.swift */,
 				16E076F97FF7235AB5655DCD /* Transcript.swift */,
 				E25ED2EEA451A3B77232FE69 /* Fonts */,
 			);
@@ -184,6 +193,7 @@
 				E4ECDA652BDE2B8FE6AF0DAD /* ChatView.swift in Sources */,
 				D39224B877E393C9EDCB3A79 /* Client.swift in Sources */,
 				26CA52731DED5B97A4D13FAA /* Composer.swift in Sources */,
+				025FE4B73D77B0AA928CA42E /* DMView.swift in Sources */,
 				EF992357CEC21958CD517D5A /* Face.swift in Sources */,
 				E359F3C189FC952F4D0379F1 /* FaceShapes.swift in Sources */,
 				99070B03EF49BE0B4315C78F /* JSON.swift in Sources */,
@@ -195,7 +205,9 @@
 				E23F1E2741D7001805CE468D /* PromptCard.swift in Sources */,
 				20CA9FE10B2613DF8DB9F660 /* RootView.swift in Sources */,
 				EC8D1DBA1C51477B59A0CE08 /* ScannerView.swift in Sources */,
+				F9E86457690385B7A5005FD5 /* TeamView.swift in Sources */,
 				14F6FBF748D2874C06F24C1C /* Theme.swift in Sources */,
+				62FD3ABE1993E3B76BAE20A0 /* ThreadView.swift in Sources */,
 				874E1A6F8CC8FC6D4CF3CCFA /* Transcript.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

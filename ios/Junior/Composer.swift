@@ -9,6 +9,8 @@ struct Composer: View {
     var placeholder = "Message Junior"
     var onSend: (String, [ImageAttachment]) -> Void
     var onStop: () -> Void = {}
+    /// Text put in the box from outside (a starter tapped); it lands once each time it changes.
+    var prefill: String?
 
     @State private var text = ""
     @State private var picks: [PhotosPickerItem] = []
@@ -78,6 +80,11 @@ struct Composer: View {
         .padding(.bottom, 6)
         .padding(.top, 4)
         .background(Theme.canvas)
+        .onChange(of: prefill) { _, t in
+            guard let t, !t.isEmpty else { return }
+            text = t
+            focused = true
+        }
         .onChange(of: picks) { _, items in
             guard !items.isEmpty else { return }
             Task {

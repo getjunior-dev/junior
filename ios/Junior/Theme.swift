@@ -3,6 +3,7 @@ import SwiftUI
 /// Brand v2 (.docs/design.md): warm ink canvas, paper text, sky for Junior, orange only for "needs you".
 enum Theme {
     static let canvas = Color(hex: 0x0C0B0A)
+    static let card = Color(hex: 0x131210)
     static let elev = Color(hex: 0x1B1917)
     static let deep = Color(hex: 0x090807)
     static let ink = Color(hex: 0xF8F7F4)

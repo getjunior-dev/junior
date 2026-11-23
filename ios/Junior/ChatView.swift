@@ -1,9 +1,11 @@
 import SwiftUI
 import UIKit
 
+/// One session's transcript and its box: a DM or a thread. The caller sets the title.
 struct ChatView: View {
     let client: JuniorClient
     let sessionId: String
+    var placeholder = "Message Junior"
 
     private var session: SessionSummary? { client.session(sessionId) }
     private var items: [TranscriptItem] { Transcript.fold(client.events[sessionId] ?? []) }
@@ -29,7 +31,7 @@ struct ChatView: View {
                             ProgressView().tint(Theme.ash).frame(maxWidth: .infinity).padding(.top, 40)
                         }
                         ForEach(items) { item in
-                            RowView(item: item, running: running) { request, behavior, answers in
+                            RowView(client: client, sessionId: sessionId, item: item, running: running) { request, behavior, answers in
                                 client.respond(sessionId, request: request, behavior: behavior, answers: answers)
                             }
                             .id(item.id)
@@ -49,15 +51,13 @@ struct ChatView: View {
                 .onChange(of: items.count) { _, _ in withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo("end", anchor: .bottom) } }
                 .onChange(of: live.count) { _, _ in proxy.scrollTo("end", anchor: .bottom) }
             }
-            Composer(running: running, enabled: client.conn == .connected) { text, images in
+            Composer(running: running, enabled: client.conn == .connected, placeholder: placeholder) { text, images in
                 client.say(text, images: images, in: sessionId)
             } onStop: {
                 client.interrupt(sessionId)
             }
         }
         .background(Theme.canvas)
-        .navigationTitle(session?.title ?? "Chat")
-        .navigationBarTitleDisplayMode(.inline)
         .onAppear { client.open(sessionId) }
         .onDisappear { client.close(sessionId) }
     }
@@ -76,12 +76,18 @@ struct WorkingLine: View {
 }
 
 struct RowView: View {
+    let client: JuniorClient
+    let sessionId: String
     let item: TranscriptItem
     let running: Bool
     var respond: (String, String, [String: String]?) -> Void
 
     var body: some View {
         switch item.row {
+        case .tool(let call) where call.name.hasSuffix("__start_session") || call.name.hasSuffix("__message_session"):
+            ThreadCards(client: client, call: call, running: running)
+        case .relayed(let text, let from):
+            RelayedCard(text: text, from: from == "junior" ? client.persona.name : from)
         case .user(let text, let images):
             UserBubble(text: text, images: images)
         case .assistant(let text):
@@ -94,11 +100,23 @@ struct RowView: View {
             Label(text, systemImage: "exclamationmark.triangle")
                 .font(Theme.sans(13))
                 .foregroundStyle(Theme.red)
-        case .notice(let text):
-            Text(text).font(Theme.sans(12)).foregroundStyle(Theme.ash)
+        case .notice(let text, let thread):
+            if let id = thread ?? reportThread(text) {
+                NavigationLink(value: Route.thread(id)) { ReportLine(text: text) }.buttonStyle(.plain)
+            } else {
+                Text(text).font(Theme.sans(12)).foregroundStyle(Theme.ash)
+            }
         case .turnEnd(let text):
             Text(text).font(Theme.mono(11)).foregroundStyle(Theme.stone).frame(maxWidth: .infinity, alignment: .trailing)
         }
+    }
+}
+
+extension RowView {
+    /// A report line in a DM names its thread by title: find it among this DM's threads.
+    func reportThread(_ text: String) -> String? {
+        guard client.session(sessionId)?.isDM == true, let title = Transcript.reportTitle(text) else { return nil }
+        return client.sessions.first { $0.startedBy == sessionId && $0.title == title }?.id
     }
 }
 

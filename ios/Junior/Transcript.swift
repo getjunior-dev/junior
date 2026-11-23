@@ -28,7 +28,10 @@ enum Row: Equatable {
     case tool(ToolCall)
     case prompt(Prompt)
     case error(String)
-    case notice(String)
+    /// `thread`: the session it is about, when the server says (a job's thread)
+    case notice(String, thread: String?)
+    /// a message another chat sent this one (a DM handing work to its thread): who, and what
+    case relayed(text: String, from: String)
     case turnEnd(String)
 }
 
@@ -45,12 +48,18 @@ enum Transcript {
         for (i, ev) in events.enumerated() {
             switch ev["kind"]?.string {
             case "local_user":
+                // A thread's report waking its DM: the notice line above it already says so.
+                if ev["report"]?.bool == true { continue }
+                if let from = ev["from"]?.string {
+                    items.append(TranscriptItem(id: "u\(i)", row: .relayed(text: ev["text"]?.string ?? "", from: from)))
+                    continue
+                }
                 let images = ev["images"]?.array?.compactMap { $0["data"]?.string } ?? []
                 items.append(TranscriptItem(id: "u\(i)", row: .user(text: ev["text"]?.string ?? "", images: images)))
             case "error":
                 items.append(TranscriptItem(id: "e\(i)", row: .error(ev["message"]?.string ?? "Something went wrong")))
             case "notice":
-                items.append(TranscriptItem(id: "n\(i)", row: .notice(ev["text"]?.string ?? "")))
+                items.append(TranscriptItem(id: "n\(i)", row: .notice(ev["text"]?.string ?? "", thread: ev["thread"]?.string)))
             case "permission_request":
                 guard let id = ev["id"]?.string else { continue }
                 let p = Prompt(
@@ -116,6 +125,25 @@ enum Transcript {
         if let s = c?.string { return s }
         if let a = c?.array { return a.compactMap { $0["text"]?.string }.joined(separator: "\n") }
         return ""
+    }
+
+    /// The thread a report line names: `X replied in "title": …` or `X is waiting on you in "title".`
+    static func reportTitle(_ text: String) -> String? {
+        guard let a = text.range(of: " in \""), let b = text.range(of: "\"", options: .backwards), a.upperBound < b.lowerBound else { return nil }
+        return String(text[a.upperBound..<b.lowerBound])
+    }
+
+    /// What a start_session result says: `{ started: [...] }`, each a thread or an error.
+    static func started(_ call: ToolCall) -> [(id: String?, title: String, error: String?)] {
+        guard let r = call.result, let data = r.data(using: .utf8),
+              let j = try? JSONDecoder().decode(JSON.self, from: data), let list = j["started"]?.array
+        else { return [] }
+        return list.compactMap { x in
+            guard let name = x["name"]?.string else { return nil }
+            if let e = x["error"]?.string { return (nil, name, e) }
+            guard let id = x["id"]?.string else { return nil }
+            return (id, x["title"]?.string ?? name, nil)
+        }
     }
 
     static func duration(_ ms: Double) -> String {
