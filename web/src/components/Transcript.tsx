@@ -198,7 +198,7 @@ function speakerTurns(
 
 /** Scroll to the newest card still waiting on you, where the needs-you face points. */
 function jumpToWaiting(from: Element | null) {
-  const cards = from?.closest('#transcript')?.querySelectorAll('.perm:has(.actions), .perm.ask:has(.askOptions)')
+  const cards = from?.closest('#transcript')?.querySelectorAll('.perm:has(.actions), .perm.ask.open')
   cards?.[cards.length - 1]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 }
 

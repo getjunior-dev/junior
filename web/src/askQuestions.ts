@@ -48,3 +48,23 @@ export function parseQuestions(input: Record<string, unknown>): AskQuestion[] | 
   }
   return questions
 }
+
+/** "(Recommended)" closing a label marks the asker's pick; the card shows it as a tag instead. */
+const RECOMMENDED = /\s*\(recommended\)\s*$/i
+
+export const isRecommended = (o: AskOption): boolean => RECOMMENDED.test(o.label)
+
+/** A label as the card shows it, without its "(Recommended)". */
+export const shownLabel = (label: string): string => label.replace(RECOMMENDED, '')
+
+/** An answer as the card shows it: every "(Recommended)" in a comma list dropped. */
+export const shownAnswer = (answer: string): string => answer.replace(/\s*\(recommended\)/gi, '')
+
+/** What a question starts with selected: the recommended option (all of them, on a multi-select). */
+export function preselected(q: AskQuestion): string[] {
+  const recs = q.options.filter(isRecommended).map((o) => o.label)
+  return q.multiSelect ? recs : recs.slice(0, 1)
+}
+
+/** The answer a skipped question sends: the asker decides it. */
+export const SKIPPED = 'Skipped, your call'

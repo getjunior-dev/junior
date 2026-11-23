@@ -166,7 +166,6 @@
 
 .tab .pdot.live { animation: pulse 1.4s ease-in-out infinite; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-.perm.ask .btn { margin-right: 8px; }
 .pageHead > .btn { margin-left: auto; flex: none; }
 .pageHead > .btn + .btn { margin-left: 0; }
 #newSessionHome .statusline .hint { font-size: 0.8462rem; color: var(--stone); white-space: nowrap; }

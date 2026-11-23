@@ -21,6 +21,7 @@
     "web/src/drafts.ts",
     "web/src/threadRename.ts",
     "web/src/uuid.ts",
+    "web/src/askQuestions.ts",
     "web/src/artifactView.ts",
     "web/src/diff.ts",
     "web/src/transcript.ts",

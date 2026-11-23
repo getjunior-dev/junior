@@ -7,7 +7,7 @@
  */
 
 /** The cards that wait on you in a transcript, oldest first. */
-export const WAITING_CARDS = '.perm:has(.actions), .perm.ask:has(.askOptions), .astub.need'
+export const WAITING_CARDS = '.perm:has(.actions), .perm.ask.open, .astub.need'
 
 /** How long a request waits for its transcript to load and render. */
 const LAPSE_MS = 15_000
