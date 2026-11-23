@@ -3,7 +3,8 @@
  * (name, body shape, colour) and takes one line on what the teammate helps
  * with; everything else (scope, tools, what it sends) Junior asks in chat,
  * where it reads the teammate back and writes the agent file. Nothing is
- * written here: "Continue in chat" hands Junior the draft as a message.
+ * written here: "Continue in chat" starts a thread of its own with the draft
+ * as its first message, so the setup talk never lands in Junior's chat.
  *
  * The key is Junior's own shape, so a teammate picks from the others. Orange
  * is never offered: it means "needs you".
@@ -38,11 +39,11 @@ export function teammateBrief(d: { name: string; shape: Shape; colour: Colour; l
     `- Name: ${name || 'suggest one'}`,
     `- Face: ${d.shape}, ${d.colour} (\`face: ${d.shape}\`, \`color: ${d.colour}\`)`,
     `- Helps with: ${line || 'ask me'}`,
-    'Read it back, ask what you still need in one message with a suggested answer each, then write its agent file.',
+    'Read it back, ask what you still need in one message with a suggested answer each, then write its agent file. End with one line: "<name> is on the team."',
   ].join('\n')
 }
 
-export function AddTeammate({ open, onClose, onContinue }: { open: boolean; onClose: () => void; onContinue: (text: string) => void }) {
+export function AddTeammate({ open, onClose, onContinue }: { open: boolean; onClose: () => void; onContinue: (brief: { text: string; title: string }) => void }) {
   const persona = usePersona()
   const agents = useChatAgents()
   const [name, setName] = useState('')
@@ -66,7 +67,7 @@ export function AddTeammate({ open, onClose, onContinue }: { open: boolean; onCl
 
   const face = AGENT_FACE[colour] ?? undefined
   const go = () => {
-    onContinue(teammateBrief({ name, shape, colour, line }))
+    onContinue({ text: teammateBrief({ name, shape, colour, line }), title: name.trim() ? `Add ${name.trim()} to the team` : 'Add a teammate' })
     onClose()
   }
 

@@ -19,7 +19,7 @@ import { HelpOverlay } from './components/HelpOverlay.js'
 import { FrictionCapture } from './components/FrictionCapture.js'
 import { InboxPage } from './components/InboxPage.js'
 import { JuniorPage } from './components/JuniorPage.js'
-import { startJuniorChat, usePersona, useRailMood } from './junior.js'
+import { usePersona, useRailMood } from './junior.js'
 import { ItemPage } from './components/ItemPage.js'
 import { NewSessionComposer } from './components/NewSessionComposer.js'
 import { type RailSection, Rail } from './components/Rail.js'
@@ -1126,12 +1126,11 @@ export function App() {
       <AddTeammate
         open={addMateOpen}
         onClose={() => setAddMateOpen(false)}
-        onContinue={(text) => {
-          // The modal only makes the face; Junior reads the teammate back, asks the rest and writes its file.
-          const dm = findDm(sessions, JUNIOR_DM)
-          if (!dm) return startJuniorChat(text)
-          store.send({ type: 'user_message', sessionId: dm.id, text })
-          navigate('/junior')
+        onContinue={({ text, title }) => {
+          // A thread of its own, not Junior's chat: the setup talk stays out of Junior's context.
+          // Junior reads the teammate back there, asks the rest and writes its file. An empty cwd is the default project.
+          const d = draftStore.create({ thread: true, label: title, text })
+          create(d.id, { title, cwd: '', firstMessage: text })
         }}
       />
 
