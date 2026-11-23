@@ -4,31 +4,18 @@
  * prompt; going to a site that isn't on this machine, and running arbitrary
  * script, do, unless the session already runs without prompts.
  */
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-
 export const BROWSER_SERVER = 'browser'
 export const browserTool = (leaf: string) => `mcp__${BROWSER_SERVER}__${leaf}`
 
-/** Is this URL on this machine (a dev server, a local file inside the project)? */
-export function isLocalUrl(raw: string, projectRoot?: string): boolean {
+/** Is this URL on this machine (a dev server, any local file)? A file: page has no sign-ins to act as. */
+export function isLocalUrl(raw: string): boolean {
   let u: URL
   try {
     u = new URL(raw)
   } catch {
     return false
   }
-  if (u.protocol === 'file:') {
-    if (!projectRoot) return false
-    let p: string
-    try {
-      p = fileURLToPath(u)
-    } catch {
-      return false
-    }
-    const rel = path.relative(path.resolve(projectRoot), path.resolve(p))
-    return !rel.startsWith('..') && !path.isAbsolute(rel)
-  }
+  if (u.protocol === 'file:') return true
   if (u.protocol !== 'http:' && u.protocol !== 'https:') return u.protocol === 'about:'
   const h = u.hostname.toLowerCase().replace(/^\[|\]$/g, '')
   return (
@@ -70,13 +57,13 @@ export function resolveUrl(raw: string, current?: string): string | null {
  * the machine and `browser_eval` does; those go through the session's normal
  * permission mode.
  */
-export function browserCallAllowed(toolName: string, input: Record<string, unknown>, projectRoot?: string): boolean {
+export function browserCallAllowed(toolName: string, input: Record<string, unknown>): boolean {
   if (!toolName.startsWith(`mcp__${BROWSER_SERVER}__`)) return false
   const leaf = toolName.slice(`mcp__${BROWSER_SERVER}__`.length)
   if (leaf === 'browser_eval') return false
   if (leaf === 'browser_open') {
     const url = typeof input.url === 'string' ? resolveUrl(input.url) : null
-    return !!url && isLocalUrl(url, projectRoot)
+    return !!url && isLocalUrl(url)
   }
   return true
 }
@@ -145,12 +132,12 @@ export function typeVerdict(el: ElementFacts | null): ElementVerdict {
 /**
  * What running script in a page may do. Script can do anything a click can,
  * Send included, so off this machine it is judged as a commit click. On a dev
- * server or a file inside the project it is testing, and free. A page we can't
+ * server or a local file it is testing, and free. A page we can't
  * place (nothing loaded yet; a tab that revives where it last was) is unsure.
  */
-export function evalVerdict(pageUrl: string | null | undefined, projectRoot?: string): ElementVerdict {
+export function evalVerdict(pageUrl: string | null | undefined): ElementVerdict {
   if (!pageUrl) return 'unsure'
-  return isLocalUrl(pageUrl, projectRoot) ? 'free' : 'commit'
+  return isLocalUrl(pageUrl) ? 'free' : 'commit'
 }
 
 /** The host a URL is on, for a prompt: "mail.google.com". */

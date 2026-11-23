@@ -266,11 +266,11 @@ export type BrowserMcpOpts = { mode?: 'chat' | 'job'; sites?: string[]; profile?
 
 export const browserMcpFor = (rt: WorkspaceRuntime, row: Pick<StoredSession, 'id' | 'cwd'>, opts: BrowserMcpOpts = {}) => {
   if (opts.profile) browserHub.fallbackProfile(row.id, opts.profile)
-  return makeBrowserMcp({ hub: browserHub, shots: rt.shots, sessionId: row.id, projectRoot: row.cwd, mode: opts.mode ?? 'chat', ...(opts.sites?.length ? { sites: opts.sites } : {}) })
+  return makeBrowserMcp({ hub: browserHub, shots: rt.shots, sessionId: row.id, mode: opts.mode ?? 'chat', ...(opts.sites?.length ? { sites: opts.sites } : {}) })
 }
 
 /** The browser's step in a veto chain, for the same session and mode as its tools. */
 export const browserGateFor = (row: Pick<StoredSession, 'id' | 'cwd'>, opts: Omit<BrowserMcpOpts, 'profile'> = {}): BrowserGate => (toolName, input) =>
-  browserGate({ hub: browserHub, sessionId: row.id, projectRoot: row.cwd, mode: opts.mode ?? 'chat', ...(opts.sites?.length ? { sites: opts.sites } : {}) }, toolName, input)
+  browserGate({ hub: browserHub, sessionId: row.id, mode: opts.mode ?? 'chat', ...(opts.sites?.length ? { sites: opts.sites } : {}) }, toolName, input)
 
 export const defaultRuntime = (): WorkspaceRuntime => runtimes.get(registry.defaultId)!

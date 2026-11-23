@@ -24,8 +24,6 @@ export type BrowserGateContext = {
   hub: BrowserHub
   /** the tab key: the session's id (a dry run's preview id) */
   sessionId: string
-  /** file: URLs inside it count as local */
-  projectRoot: string
   mode: 'chat' | 'job'
   /** a job's `browser_sites`: browser_open outside them is refused */
   sites?: string[]
@@ -63,7 +61,7 @@ export async function browserGate(ctx: BrowserGateContext, toolName: string, inp
     if (typeof i.url !== 'string') return null
     const url = resolveUrl(i.url, pg.url)
     // the tool says what is wrong with a URL it can't open
-    if (!url || isLocalUrl(url, ctx.projectRoot)) return null
+    if (!url || isLocalUrl(url)) return null
     if (ctx.mode === 'job') {
       if (typeof i.profile === 'string' && i.profile.trim()) return { allow: false, reason: 'A job uses the profile its file names; leave out profile.' }
       return hostAllowed(ctx.sites, url) ? null : { allow: false, reason: `This job may only open ${ctx.sites!.join(', ')}. ${hostOf(url)} is not one of them.` }
@@ -74,7 +72,7 @@ export async function browserGate(ctx: BrowserGateContext, toolName: string, inp
 
   if (leaf === 'browser_eval') {
     // Script can do anything a click can: off this machine it is a commit click.
-    const v = evalVerdict(pg.url, ctx.projectRoot)
+    const v = evalVerdict(pg.url)
     if (v === 'free') return null
     const where = pg.url ? hostOf(pg.url) : 'this page'
     if (ctx.mode === 'job') {
@@ -90,7 +88,7 @@ export async function browserGate(ctx: BrowserGateContext, toolName: string, inp
   if (leaf !== 'browser_act' && leaf !== 'browser_fill') return null
   // Everything is free on this machine: that is what testing is.
   const here = pg.url
-  if (!here || isLocalUrl(here, ctx.projectRoot)) return null
+  if (!here || isLocalUrl(here)) return null
   if (!ctx.hub.status.compatible) return null // the tool answers "open Junior.app"
 
   const d = new PageDriver(ctx.hub, pageKey)

@@ -41,7 +41,7 @@ export function makeBrowserMcp(ctx: BrowserToolContext) {
             const cur = (await cur0.state().catch(() => null))?.url
             const url = resolveUrl(args.url, cur)
             if (!url) return fail(`"${args.url}" is not a URL this browser can open.`)
-            if (job && !isLocalUrl(url, ctx.projectRoot) && !hostAllowed(ctx.sites, url)) return fail(`This job may only open ${ctx.sites!.join(', ')}.`)
+            if (job && !isLocalUrl(url) && !hostAllowed(ctx.sites, url)) return fail(`This job may only open ${ctx.sites!.join(', ')}.`)
             const notes: string[] = []
             const asked = (args as { profile?: string }).profile
             const want = typeof asked === 'string' && asked.trim() ? asked : null
@@ -61,7 +61,7 @@ export function makeBrowserMcp(ctx: BrowserToolContext) {
             const r = await ctx.hub.open(d.sessionId, url, args.wait ?? 'idle')
             d.memory.url = r.url
             // The user let this session open the site (the gate asked): the same site doesn't ask again.
-            if (!job && !isLocalUrl(url, ctx.projectRoot)) {
+            if (!job && !isLocalUrl(url)) {
               for (const u of [url, r.url]) {
                 try {
                   ctx.hub.page(ctx.sessionId).sites.add(siteOf(new URL(u).hostname))

@@ -329,7 +329,7 @@ const OPEN = 'mcp__browser__browser_open'
 
 test('gate: on a signed-in site a Send click asks in a chat and is refused in a job; local pages are free', async () => {
   await withHost(describing({ name: 'Send' }), async (hub) => {
-    const ctx = { hub, sessionId: 'g1', projectRoot: '/tmp/proj', mode: 'chat' as const }
+    const ctx = { hub, sessionId: 'g1', mode: 'chat' as const }
     hub.page('g1').url = 'http://localhost:5173/compose'
     assert.equal(await browserGate(ctx, ACT, { action: 'click', uid: 7 }), null)
     hub.page('g1').url = 'https://mail.google.com/mail/u/0/'
@@ -353,8 +353,8 @@ test('gate: browser_eval on a signed-in site asks in a chat and is refused in a 
   const EVAL = 'mcp__browser__browser_eval'
   const input = { expression: "document.querySelector('[aria-label=Send]').click()" }
   await withHost(describing({ name: 'Send' }), async (hub) => {
-    const ctx = { hub, sessionId: 'g-eval', projectRoot: '/tmp/proj', mode: 'chat' as const }
-    // a dev server and a file inside the project: testing, no opinion
+    const ctx = { hub, sessionId: 'g-eval', mode: 'chat' as const }
+    // a dev server and a local file: testing, no opinion
     hub.page('g-eval').url = 'http://localhost:5173/'
     assert.equal(await browserGate(ctx, EVAL, input), null)
     assert.equal(await browserGate({ ...ctx, mode: 'job' }, EVAL, input), null)
@@ -370,10 +370,9 @@ test('gate: browser_eval on a signed-in site asks in a chat and is refused in a 
     const j = await browserGate({ ...ctx, mode: 'job' }, EVAL, input)
     assert.ok(j && !j.allow && !j.ask)
     assert.match(j.reason, /A job can't run script on mail\.google\.com/)
-    // a file outside the project is not local
-    hub.page('g-eval').url = 'file:///Users/me/Downloads/statement.html'
-    const out = await browserGate(ctx, EVAL, input)
-    assert.ok(out && !out.allow && out.ask)
+    // a file anywhere on this machine: no sign-ins there, no opinion
+    hub.page('g-eval').url = 'file:///tmp/askcard/index.html'
+    assert.equal(await browserGate(ctx, EVAL, input), null)
     // no page yet: it may revive anywhere, so it asks too
     hub.page('g-eval').url = ''
     const u = await browserGate(ctx, EVAL, input)
@@ -388,7 +387,7 @@ test('gate: browser_eval on a signed-in site asks in a chat and is refused in a 
 
 test('gate: never a password on a site; a chat asks once per site; a job opens only its sites', async () => {
   await withHost(describing({ role: 'textbox', tag: 'input', type: 'password', editable: true, name: 'Password' }), async (hub) => {
-    const ctx = { hub, sessionId: 'g2', projectRoot: '/tmp/proj', mode: 'chat' as const }
+    const ctx = { hub, sessionId: 'g2', mode: 'chat' as const }
     hub.page('g2').url = 'https://app.pendo.io/login'
     const pw = await browserGate(ctx, ACT, { action: 'type', uid: 7, text: 'hunter2' })
     assert.ok(pw && !pw.allow && !pw.ask)
@@ -415,7 +414,7 @@ test('take over: while the user holds the tab every tool but browser_profiles wa
     (f) => (f.verb === 'state' ? { exists: true, url: 'http://localhost:3000/', title: 'App', loading: false, viewport: null, colorScheme: null, profile: 'default', popup: null, dialog: null } : null),
     async (hub) => {
       hub.setResolver(() => ({ store: tabs, defaultProfile: async () => 'default', leadSessionId: null, broadcast: (m) => told.push(m) }))
-      const server = makeBrowserMcp({ hub, shots: new ShotStore(mkdtempSync(path.join(os.tmpdir(), 'junior-shots-'))), sessionId: 't1', projectRoot: '/tmp/p', mode: 'chat' })
+      const server = makeBrowserMcp({ hub, shots: new ShotStore(mkdtempSync(path.join(os.tmpdir(), 'junior-shots-'))), sessionId: 't1', mode: 'chat' })
       const tools = (server.instance as unknown as { _registeredTools: Record<string, { handler?: (a: unknown, e: unknown) => Promise<{ isError?: boolean; content: { text?: string }[] }>; callback?: (a: unknown, e: unknown) => Promise<{ isError?: boolean; content: { text?: string }[] }> }> })._registeredTools
       const call = (name: string, args: unknown = {}) => {
         const t = tools[name]
@@ -432,7 +431,7 @@ test('take over: while the user holds the tab every tool but browser_profiles wa
       }
       // the gate stays out of the way: the tool says why
       hub.page('t1').url = 'https://mail.google.com/'
-      assert.equal(await browserGate({ hub, sessionId: 't1', projectRoot: '/tmp/p', mode: 'chat' }, ACT, { action: 'click', uid: 7 }), null)
+      assert.equal(await browserGate({ hub, sessionId: 't1', mode: 'chat' }, ACT, { action: 'click', uid: 7 }), null)
       const profiles = await call('browser_profiles')
       assert.notEqual(profiles.isError, true)
       assert.equal((await hub.setHeld('t1', false)).heldByUser, false)
@@ -469,7 +468,7 @@ test('dialog: a click that opens confirm() returns at once; other tools say a di
       return dialogUp ? NO_REPLY : {}
     },
     async (hub, host, seen) => {
-      const call = toolsOf(makeBrowserMcp({ hub, shots: new ShotStore(mkdtempSync(path.join(os.tmpdir(), 'junior-shots-'))), sessionId: 'd1', projectRoot: '/tmp/p', mode: 'chat' }))
+      const call = toolsOf(makeBrowserMcp({ hub, shots: new ShotStore(mkdtempSync(path.join(os.tmpdir(), 'junior-shots-'))), sessionId: 'd1', mode: 'chat' }))
       const clicking = call('browser_act', { action: 'click', uid: 4 })
       await sleep(50)
       host.send(JSON.stringify({ type: 'dialog', sessionId: 'd1', dialog: { type: 'confirm', message: 'Delete it?' } }))
@@ -511,7 +510,7 @@ test('a profile sign-in tab is never driven by a tool', async () => {
   await withHost(
     () => STATE,
     async (hub, _host, seen) => {
-      const call = toolsOf(makeBrowserMcp({ hub, shots: new ShotStore(mkdtempSync(path.join(os.tmpdir(), 'junior-shots-'))), sessionId: 'profile-work', projectRoot: '/tmp/p', mode: 'chat' }))
+      const call = toolsOf(makeBrowserMcp({ hub, shots: new ShotStore(mkdtempSync(path.join(os.tmpdir(), 'junior-shots-'))), sessionId: 'profile-work', mode: 'chat' }))
       for (const [name, args] of [['browser_open', { url: 'localhost:3000' }], ['browser_snapshot', {}], ['browser_act', { action: 'scroll' }]] as const) {
         const r = await call(name, args)
         assert.equal(r.isError, true, name)
@@ -559,7 +558,7 @@ test('steps: a call puts its step on the tab while it runs, and the pane hears i
       hub.setResolver(() => ({ store: tabs, defaultProfile: async () => 'default', leadSessionId: null, broadcast: (m) => told.push(m) }))
       host.send(JSON.stringify({ type: 'tab', sessionId: 'st1', profile: 'default', url: 'http://localhost:3000/', title: 'App', viewport: null, colorScheme: null }))
       await sleep(30)
-      const call = toolsOf(makeBrowserMcp({ hub, shots: new ShotStore(mkdtempSync(path.join(os.tmpdir(), 'junior-shots-'))), sessionId: 'st1', projectRoot: '/tmp/p', mode: 'chat' }))
+      const call = toolsOf(makeBrowserMcp({ hub, shots: new ShotStore(mkdtempSync(path.join(os.tmpdir(), 'junior-shots-'))), sessionId: 'st1', mode: 'chat' }))
       await call('browser_act', { action: 'click', uid: 7 })
       await sleep(30)
       const steps = told.flatMap((m) => (m.type === 'browser_tab' ? [m.tab.agentStep] : []))

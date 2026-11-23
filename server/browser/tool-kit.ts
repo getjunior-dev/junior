@@ -11,8 +11,6 @@ export type BrowserToolContext = {
   hub: BrowserHub
   shots: ShotStore
   sessionId: string
-  /** the session's folder: file: URLs inside it count as local */
-  projectRoot: string
   /** a chat asks before risky steps; a job run is unattended and is refused them */
   mode: 'chat' | 'job'
   /** a job's `browser_sites`: browser_open outside them is refused */

@@ -52,12 +52,11 @@ test('snapshot: scoped to a uid, capped with a note, and a gone uid says so', ()
   assert.match(formatSnapshot(TREE, { rootUid: 999 }).text, /not on the page/)
 })
 
-test('policy: local means this machine, and a file inside the project', () => {
+test('policy: local means this machine, any file on it included', () => {
   for (const u of ['http://localhost:5173/', 'http://127.0.0.1:3000/x', 'http://app.localhost/', 'http://[::1]:8080/', 'about:blank']) assert.ok(isLocalUrl(u), u)
   for (const u of ['https://example.com/', 'http://192.168.1.4/', 'http://localhost.evil.com/', 'javascript:alert(1)']) assert.ok(!isLocalUrl(u), u)
-  assert.ok(isLocalUrl('file:///repo/app/index.html', '/repo/app'))
-  assert.ok(!isLocalUrl('file:///etc/passwd', '/repo/app'))
-  assert.ok(!isLocalUrl('file:///repo/app/index.html'))
+  assert.ok(isLocalUrl('file:///repo/app/index.html'))
+  assert.ok(isLocalUrl('file:///tmp/askcard/index.html'))
 })
 
 test('policy: urls are completed, script urls refused', () => {
@@ -79,17 +78,17 @@ test('policy: reading and using the page never asks; leaving the machine and eva
 
 test('policy: eval off this machine is a commit, on a local page it is free', () => {
   // script in a signed-in tab can click Send: judged as a commit click
-  assert.equal(evalVerdict('https://mail.google.com/mail/u/0/', '/repo/app'), 'commit')
+  assert.equal(evalVerdict('https://mail.google.com/mail/u/0/'), 'commit')
   assert.equal(evalVerdict('https://github.com/acme/app/pull/1'), 'commit')
   assert.equal(evalVerdict('http://192.168.1.4:3000/'), 'commit')
   assert.equal(evalVerdict('http://localhost.evil.com/'), 'commit')
-  // a dev server, a file inside the project, a blank tab: testing, free
-  assert.equal(evalVerdict('http://localhost:5173/', '/repo/app'), 'free')
+  // a dev server, a local file, a blank tab: testing, free
+  assert.equal(evalVerdict('http://localhost:5173/'), 'free')
   assert.equal(evalVerdict('http://127.0.0.1:3000/x'), 'free')
-  assert.equal(evalVerdict('file:///repo/app/dist/index.html', '/repo/app'), 'free')
+  assert.equal(evalVerdict('file:///repo/app/dist/index.html'), 'free')
   assert.equal(evalVerdict('about:blank'), 'free')
-  // a file outside the project is not this project's page
-  assert.equal(evalVerdict('file:///Users/me/Downloads/statement.html', '/repo/app'), 'commit')
+  // a file anywhere on this machine: no sign-ins to act as
+  assert.equal(evalVerdict('file:///tmp/askcard/index.html'), 'free')
   // no page yet: a revived tab may land anywhere
   assert.equal(evalVerdict(''), 'unsure')
   assert.equal(evalVerdict(undefined), 'unsure')

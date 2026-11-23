@@ -66,7 +66,7 @@ export async function browserRoutes({ req, url, json, res, rt }: ScopedCtx): Pro
       const b = (await readJsonBody(req, 10_000)) as { sessionId?: unknown; uid?: unknown } | null
       const row = typeof b?.sessionId === 'string' ? rt.rows.get(b.sessionId) : undefined
       if (!row || typeof b?.uid !== 'number') throw new Error('need a session of this workspace and a uid')
-      body = { ok: true, ...(await describePicked({ hub: browserHub, shots: rt.shots, sessionId: row.id, projectRoot: row.cwd, mode: 'chat' }, b.uid)) }
+      body = { ok: true, ...(await describePicked({ hub: browserHub, shots: rt.shots, sessionId: row.id, mode: 'chat' }, b.uid)) }
     } catch (err) {
       body = { ok: false, error: errText(err) }
     }

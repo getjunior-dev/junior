@@ -615,12 +615,12 @@ export class LiveSession {
     // Other chats: starting and messaging them is local work (server/session/spawn-ops.ts).
     if (SESSION_TOOLS.has(toolName)) return Promise.resolve({ behavior: 'allow', updatedInput: toolInput })
     // The browser pane: the gate in the veto (server/browser/gate.ts) decided
-    // already. What it asked about comes to you; the rest runs, except
-    // browser_eval, which falls through to the session's mode below.
+    // already. What it asked about comes to you; the rest runs, browser_eval
+    // included: the gate asks for script anywhere but this machine.
     if (toolName.startsWith(BROWSER_PREFIX)) {
       const why = browserHub.page(this.row.id).takeAsk(toolName, toolInput)
       if (why) return this.askUser(toolName, toolInput, { ...opts, description: why }, effect)
-      if (toolName !== `${BROWSER_PREFIX}browser_eval`) return Promise.resolve({ behavior: 'allow', updatedInput: toolInput })
+      return Promise.resolve({ behavior: 'allow', updatedInput: toolInput })
     }
     const run = teamRunOf(this.rt, this.row.id)
     if (run && run.leadSessionId !== this.row.id && toolName === 'Bash') {
