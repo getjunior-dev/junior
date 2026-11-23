@@ -2,10 +2,10 @@
  * Junior's body shapes (Settings → About me → Shape, and a teammate's `face:`). The key is the brand's
  * (brand v2, .docs/junior-goals-teams/junior-brand-v2.html): skirt, body and
  * top, drawn in its 128-unit grid (viewBox 8 10 112 112), eyes at y 55, x 49
- * and 79. The others are the older slab-era outlines in their own grid
- * (-4 -4 112 110, eyes at y≈56, x 37 and 63), placed onto the key's grid by
- * `frame`; their darker underside is the front nudged down and right, their
- * lighter plate the front shrunk about the face.
+ * and 79. The others are the older slab-era outlines in their own grid,
+ * fitted by `frame` into the key's front box so the eyes and mouth sit where
+ * they do on the key; their darker underside is the front moved straight
+ * down, their lighter plate the front shrunk and lifted like the key's top.
  * Pure and browser-safe.
  */
 
@@ -38,10 +38,6 @@ const FRONT: Record<Exclude<Shape, 'key'>, string> = {
   blob: 'M44 6 C66 0 92 12 94 36 C96 58 92 82 70 90 C50 97 22 92 10 76 C0 62 4 38 14 22 C22 10 32 8 44 6 Z',
 }
 
-/** The slab's underside was drawn by hand; the rest are their front nudged by this much. */
-const SLAB_BACK = 'M22 15 C44 11 70 11 88 17 C97 20 99 30 99 46 C99 64 98 80 92 89 C88 96 78 97 58 97 C38 97 24 97 17 91 C11 85 10 69 10 51 C10 33 12 19 22 15 Z'
-const DEPTH = { x: 5, y: 6 }
-
 /** Every coordinate pair in an absolute-command path, moved by (dx, dy). */
 function nudge(d: string, dx: number, dy: number): string {
   return d.replace(/(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/g, (_, x: string, y: string) => `${Number(x) + dx} ${Number(y) + dy}`)
@@ -60,11 +56,36 @@ function squircle(cx: number, cy: number, a: number, b: number, n = 4.5): string
 }
 
 const KEY = { back: squircle(64, 70, 54, 48), front: squircle(64, 62, 54, 48), top: squircle(64, 57, 43, 37) }
-/** The older outlines onto the key's grid: their eyes (37/63, 56) land on the key's (49/79, 55). */
-const OLD_FRAME = 'translate(6.3 -9.6) scale(1.154)'
 
-/** The lighter plate on an older outline: its own front, shrunk about the face so the eyes and mouth sit on it, like the key's top. */
-const PLATE = 'translate(50 52) scale(0.78) translate(-50 -52)'
+/** The key's front: 108 × 96 about (64, 62). Its skirt hangs 8 below; its top is 0.79 of it, 5 higher. */
+const BOX = { cx: 64, cy: 62, w: 108, h: 96, skirt: 8, plate: 0.79, lift: 5 }
+
+/** A path's bounds from its points (control points included: close enough for a fit). */
+function bounds(d: string) {
+  const n = (d.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number)
+  const xs = n.filter((_, i) => i % 2 === 0)
+  const ys = n.filter((_, i) => i % 2 === 1)
+  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)]
+  return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, w: x1 - x0, h: y1 - y0 }
+}
+
+/**
+ * An older outline fitted into the key's front box, so the eyes and mouth
+ * land where they do on the key; its skirt straight below and its plate
+ * shrunk and lifted like the key's top.
+ */
+function fitted(front: string) {
+  const b = bounds(front)
+  const k = Math.min(BOX.w / b.w, BOX.h / b.h)
+  const r = (v: number) => Number(v.toFixed(3))
+  return {
+    front,
+    back: nudge(front, 0, r(BOX.skirt / k)),
+    top: front,
+    frame: `translate(${r(BOX.cx - k * b.cx)} ${r(BOX.cy - k * b.cy)}) scale(${r(k)})`,
+    topFrame: `translate(${r(b.cx)} ${r(b.cy - BOX.lift / k)}) scale(${BOX.plate}) translate(${r(-b.cx)} ${r(-b.cy)})`,
+  }
+}
 
 /**
  * What the face draws for a shape: its underside, its front, its lighter top
@@ -74,5 +95,5 @@ const PLATE = 'translate(50 52) scale(0.78) translate(-50 -52)'
 export function shapePaths(shape: Shape): { back: string; front: string; top: string; frame?: string; topFrame?: string } {
   const s = isShape(shape) ? shape : DEFAULT_SHAPE
   if (s === 'key') return { ...KEY }
-  return { front: FRONT[s], back: s === 'slab' ? SLAB_BACK : nudge(FRONT[s], DEPTH.x, DEPTH.y), top: FRONT[s], frame: OLD_FRAME, topFrame: PLATE }
+  return fitted(FRONT[s])
 }
