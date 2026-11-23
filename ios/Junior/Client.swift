@@ -32,6 +32,11 @@ final class JuniorClient {
     private(set) var events: [String: [JSON]] = [:]
     private(set) var paging: [String: Paging] = [:]
     private(set) var live: [String: String] = [:]
+    /// The teammates and Junior itself, refetched on connect and on a workspace switch.
+    private(set) var agents: [ChatAgent] = []
+    private(set) var persona = Persona()
+    /// A DM this phone just asked for, by agent (nil key = Junior): its screen moves onto it once it exists.
+    private var pendingDM: Set<String> = []
     var lastError: String?
     /// The Mac refused the token: the app goes back to the scanner.
     private(set) var unpaired = false
@@ -57,6 +62,61 @@ final class JuniorClient {
     private var workspaceKey: String { "workspace:\(base.absoluteString)" }
     var workspace: Workspace? { workspaces.first { $0.id == workspaceId } }
     func session(_ id: String) -> SessionSummary? { sessions.first { $0.id == id } }
+
+    // MARK: the team
+
+    /// An agent's DM, its one long chat. nil agent = Junior's.
+    func dm(for agent: String?) -> SessionSummary? {
+        sessions.filter { $0.isDM && $0.agent == agent }.max { $0.updatedAt < $1.updatedAt }
+    }
+
+    /// The threads a DM started, still open: yours first, then working, then the rest; newest first.
+    func threads(of dmId: String) -> [SessionSummary] {
+        let order: (ThreadState) -> Int = { s in
+            switch s { case .you: return 0; case .stopped: return 1; case .working: return 2; case .ready: return 3 }
+        }
+        return sessions
+            .filter { $0.startedBy == dmId && !$0.isDM && !$0.archived }
+            .sorted { a, b in
+                let (x, y) = (order(ThreadState(a)), order(ThreadState(b)))
+                return x != y ? x < y : a.updatedAt > b.updatedAt
+            }
+    }
+
+    /// How many things under an agent wait on you: its DM and its threads.
+    func needsYou(for agent: String?) -> Int {
+        guard let dm = dm(for: agent) else { return 0 }
+        return (dm.waiting ? 1 : 0) + threads(of: dm.id).filter(\.waiting).count
+    }
+
+    /// Something under an agent is running now.
+    func working(for agent: String?) -> Bool {
+        guard let dm = dm(for: agent) else { return false }
+        return dm.running || threads(of: dm.id).contains { ThreadState($0) == .working }
+    }
+
+    func chatAgent(_ name: String?) -> ChatAgent? { name.flatMap { n in agents.first { $0.name == n } } }
+
+    /// Who a session talks as, in words: the agent's label, else Junior's name.
+    func label(of agent: String?) -> String { chatAgent(agent)?.label ?? persona.name }
+
+    func loadTeam() async {
+        if let j = try? await getJSON("/api/library/chat-agents"), j["ok"]?.bool == true {
+            agents = j["agents"]?.array?.compactMap(ChatAgent.init) ?? []
+        }
+        if let j = try? await getJSON("/api/persona"), let p = Persona(j["persona"]) { persona = p }
+    }
+
+    /// The first message of an agent's DM: the server makes the DM in the default project.
+    func startDM(agent: String?, text: String, images: [ImageAttachment]) {
+        pendingDM.insert(agent ?? "")
+        var msg: [String: Any] = ["type": "create_session", "title": label(of: agent), "firstMessage": text, "dm": true]
+        if let agent { msg["agent"] = agent }
+        if !images.isEmpty { msg["images"] = images.map(\.json) }
+        send(msg)
+    }
+
+    func startingDM(_ agent: String?) -> Bool { pendingDM.contains(agent ?? "") }
 
     // MARK: socket
 
@@ -152,11 +212,13 @@ final class JuniorClient {
             sessions = frame["sessions"]?.array?.compactMap(SessionSummary.init) ?? []
             // A reconnect leaves the open chat stale: ask for it again.
             if let s = subscribed { sendSubscribe(s) }
+            Task { await loadTeam() }
         case "sessions":
             sessions = frame["sessions"]?.array?.compactMap(SessionSummary.init) ?? []
         case "session_created":
             guard let s = SessionSummary(frame["session"]) else { return }
             if !sessions.contains(where: { $0.id == s.id }) { sessions.append(s) }
+            if s.isDM { pendingDM.remove(s.agent ?? "") }
         case "session_deleted":
             guard let id = frame["sessionId"]?.string else { return }
             sessions.removeAll { $0.id == id }
@@ -183,6 +245,7 @@ final class JuniorClient {
             apply(id, ev)
         case "create_failed", "error":
             lastError = frame["message"]?.string
+            if type == "create_failed" { pendingDM = [] }
         default:
             break
         }
@@ -250,6 +313,8 @@ final class JuniorClient {
         events = [:]
         paging = [:]
         live = [:]
+        agents = []
+        pendingDM = []
         subscribed = nil
         connect()
     }
