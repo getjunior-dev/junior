@@ -391,11 +391,13 @@ export const JuniorFace = memo(function JuniorFace({ mood = 'hello', size = 40, 
             <path d={body.top} transform={body.topFrame} fill={p.top} />
           </g>
         </g>
-        <g data-part="face">
-          {[0, 1].map((i) => <rect key={`e${i}`} data-part="eye" fill={p.eye} />)}
-          {[0, 1].map((i) => <circle key={`s${i}`} data-part="shine" fill="#fff" />)}
-          {[0, 1].map((i) => <path key={`a${i}`} data-part="arc" fill="none" strokeLinecap="round" stroke={p.eye} opacity={0} />)}
-          <path data-part="mouth" fill="none" strokeLinecap="round" stroke={p.skirt} />
+        <g transform={body.faceShift}>
+          <g data-part="face">
+            {[0, 1].map((i) => <rect key={`e${i}`} data-part="eye" fill={p.eye} />)}
+            {[0, 1].map((i) => <circle key={`s${i}`} data-part="shine" fill="#fff" />)}
+            {[0, 1].map((i) => <path key={`a${i}`} data-part="arc" fill="none" strokeLinecap="round" stroke={p.eye} opacity={0} />)}
+            <path data-part="mouth" fill="none" strokeLinecap="round" stroke={p.skirt} />
+          </g>
         </g>
       </g>
       <g data-part="led" opacity={0}>
