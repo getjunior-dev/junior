@@ -19,7 +19,7 @@ import { HelpOverlay } from './components/HelpOverlay.js'
 import { FrictionCapture } from './components/FrictionCapture.js'
 import { InboxPage } from './components/InboxPage.js'
 import { JuniorPage } from './components/JuniorPage.js'
-import { usePersona, useRailMood } from './junior.js'
+import { startJuniorChat, usePersona, useRailMood } from './junior.js'
 import { ItemPage } from './components/ItemPage.js'
 import { NewSessionComposer } from './components/NewSessionComposer.js'
 import { type RailSection, Rail } from './components/Rail.js'
@@ -78,6 +78,7 @@ import { AgentDmStart } from './components/AgentDmStart.js'
 import { ChatSide } from './components/ChatSide.js'
 import { useChatSide } from './chatSide.js'
 import { composerDrafts } from './composerDrafts.js'
+import { AddTeammate } from './components/AddTeammate.js'
 import { JUNIOR_DM, dmAgent, dmKey, findDm } from '../../core/junior/dms.js'
 import { agentThreads } from '../../core/junior/threads.js'
 import { TeamRail, TeamSidebar, type SidebarPlace } from './components/TeamSidebar.js'
@@ -139,6 +140,7 @@ export function App() {
   const events = useEvents(currentId)
   const paging = usePaging(currentId)
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const [addMateOpen, setAddMateOpen] = useState(false)
   // Fetched once per session for the transcript's turn markers.
   const sessionChanges = useSessionChanges(currentId)
   const [helpOpen, setHelpOpen] = useState(false)
@@ -811,12 +813,7 @@ export function App() {
               onThread={(id) => navigate(id)}
               owner={owner}
               onPlace={(place) => navigate(place === 'tasks' ? '/inbox' : `/${place}`)}
-              onNewAgent={() => {
-                // A conversation, not a form: Junior asks what the agent is for and writes its file.
-                const dm = findDm(sessions, JUNIOR_DM)
-                if (dm && !composerDrafts.get(dm.id)) composerDrafts.set(dm.id, 'Make me a new agent. It should ')
-                navigate('/junior')
-              }}
+              onNewAgent={() => setAddMateOpen(true)}
               onSearch={() => setPaletteOpen(true)}
               onUsage={() => navigate('/usage')}
               onSettings={() => openSettings()}
@@ -1125,6 +1122,18 @@ export function App() {
         </div>
         </>
       </div>
+
+      <AddTeammate
+        open={addMateOpen}
+        onClose={() => setAddMateOpen(false)}
+        onContinue={(text) => {
+          // The modal only makes the face; Junior reads the teammate back, asks the rest and writes its file.
+          const dm = findDm(sessions, JUNIOR_DM)
+          if (!dm) return startJuniorChat(text)
+          store.send({ type: 'user_message', sessionId: dm.id, text })
+          navigate('/junior')
+        }}
+      />
 
       <CommandPalette
         open={paletteOpen}

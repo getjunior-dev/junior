@@ -205,6 +205,21 @@ a.jrRef { overflow-wrap: anywhere; }
 .jrShapes .shp[data-state="checked"] { background: var(--wash-3); border-color: var(--hair-bright); }
 .jrShapes .shp:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 
+/* Add a teammate (AddTeammate.tsx): the face up top, then name, shape, colour and one line; the chat does the rest. */
+.uiDialog.addMate { width: 440px; }
+.addMate .amFace { display: grid; place-items: center; padding: 6px 0 14px; }
+.addMate .amName { text-align: center; font-size: 1.0769rem; font-weight: 500; }
+.addMate .amShapes { justify-content: center; gap: 2px; margin-top: 14px; }
+.addMate .amShapes .shp { width: 46px; height: 46px; }
+.addMate .amColours { display: flex; justify-content: center; gap: 10px; margin-top: 12px; }
+.addMate .amSwatch { width: 22px; height: 22px; padding: 0; border: 0; border-radius: var(--r-full); cursor: pointer; }
+.addMate .amSwatch[data-state="checked"] { outline: 2px solid var(--ink); outline-offset: 3px; }
+.addMate .amSwatch:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+.addMate .amLine { margin-top: 16px; resize: none; }
+.addMate .amRoles { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; font-size: 0.9231rem; color: var(--mute); }
+.addMate .amRole { padding: 2px 10px; border: 1px solid var(--hair-strong); border-radius: var(--r-full); background: none; color: var(--ink); font: inherit; cursor: pointer; }
+.addMate .amRole:hover { background: var(--wash-2); }
+
 /* Junior's log (JuniorLog.tsx): one feed, All · Sent. Dense aligned rows: when · icon · what + who allowed it · link · state. */
 .jlFilters { display: flex; align-items: baseline; gap: 4px; margin: 24px 0 8px; }
 .jlFilter { padding: 3px 10px; border: 1px solid transparent; border-radius: var(--r-full); background: none; color: var(--ash); font-size: 0.9231rem; cursor: pointer; }
