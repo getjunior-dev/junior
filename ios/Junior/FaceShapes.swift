@@ -1,5 +1,5 @@
 // Generated from core/junior/shapes.ts (shapePaths, transforms applied): the 128-unit key grid.
-// Regenerate if the shapes change; don't edit by hand.
+// Regenerate with ios/scripts/face-shapes.ts if the shapes change; don't edit by hand.
 
 extension FaceBody {
     static let all: [String: FaceBody] = [
