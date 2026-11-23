@@ -73,7 +73,7 @@ struct TeamView: View {
     /// for checking the Simulator without taps.
     private static func launchRoute() -> [Route] {
         #if DEBUG
-        guard let r = UserDefaults.standard.string(forKey: "route") else { return [] }
+        guard let r = UserDefaults.standard.string(forKey: "route"), !r.isEmpty else { return [] }
         if r.hasPrefix("thread:") { return [.thread(String(r.dropFirst(7)))] }
         return [.dm(r == "junior" ? nil : r)]
         #else
