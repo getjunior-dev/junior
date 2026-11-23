@@ -44,5 +44,5 @@ targets:
         UIAppFonts:
           - Geist.ttf
           - GeistMono.ttf
-          - InstrumentSerif-Regular.ttf
+          - VarelaRound-Regular.ttf
         NSPhotoLibraryUsageDescription: Junior attaches the photos you pick to your message.

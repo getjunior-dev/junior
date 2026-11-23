@@ -32,16 +32,9 @@ final class JuniorClient {
     private(set) var events: [String: [JSON]] = [:]
     private(set) var paging: [String: Paging] = [:]
     private(set) var live: [String: String] = [:]
-    private(set) var projects: [Project] = []
-    /// Bumped on every `artifacts_changed` and workspace switch: the Artifacts tab refetches on it.
-    private(set) var artifactsVersion = 0
     var lastError: String?
     /// The Mac refused the token: the app goes back to the scanner.
     private(set) var unpaired = false
-    /// A chat this phone just created: the Chats tab opens it.
-    var created: String?
-
-    private var pendingCreate: String?
     private var task: URLSessionWebSocketTask?
     private var subscribed: String?
     private var retry: Task<Void, Never>?
@@ -63,9 +56,6 @@ final class JuniorClient {
 
     private var workspaceKey: String { "workspace:\(base.absoluteString)" }
     var workspace: Workspace? { workspaces.first { $0.id == workspaceId } }
-    var chats: [SessionSummary] {
-        sessions.filter(\.isChat).sorted { a, b in a.pinned != b.pinned ? a.pinned : a.updatedAt > b.updatedAt }
-    }
     func session(_ id: String) -> SessionSummary? { sessions.first { $0.id == id } }
 
     // MARK: socket
@@ -162,16 +152,11 @@ final class JuniorClient {
             sessions = frame["sessions"]?.array?.compactMap(SessionSummary.init) ?? []
             // A reconnect leaves the open chat stale: ask for it again.
             if let s = subscribed { sendSubscribe(s) }
-            Task { await loadProjects() }
         case "sessions":
             sessions = frame["sessions"]?.array?.compactMap(SessionSummary.init) ?? []
         case "session_created":
             guard let s = SessionSummary(frame["session"]) else { return }
             if !sessions.contains(where: { $0.id == s.id }) { sessions.append(s) }
-            if let p = pendingCreate, p == s.title {
-                pendingCreate = nil
-                created = s.id
-            }
         case "session_deleted":
             guard let id = frame["sessionId"]?.string else { return }
             sessions.removeAll { $0.id == id }
@@ -196,8 +181,6 @@ final class JuniorClient {
         case "session_event":
             guard let id = frame["sessionId"]?.string, let ev = frame["event"] else { return }
             apply(id, ev)
-        case "artifacts_changed":
-            artifactsVersion += 1
         case "create_failed", "error":
             lastError = frame["message"]?.string
         default:
@@ -257,16 +240,6 @@ final class JuniorClient {
         send(msg)
     }
 
-    /// A new chat, as the web composer starts one: the title is the first line of the message.
-    func createChat(in project: Project, text: String, images: [ImageAttachment]) {
-        let line = text.trimmingCharacters(in: .whitespacesAndNewlines).components(separatedBy: "\n").first ?? ""
-        let title = String(line.prefix(80))
-        pendingCreate = title
-        var msg: [String: Any] = ["type": "create_session", "title": title, "cwd": project.path, "projectId": project.id, "firstMessage": text]
-        if !images.isEmpty { msg["images"] = images.map(\.json) }
-        send(msg)
-    }
-
     // MARK: workspaces
 
     func switchWorkspace(_ id: String) {
@@ -277,9 +250,7 @@ final class JuniorClient {
         events = [:]
         paging = [:]
         live = [:]
-        projects = []
         subscribed = nil
-        artifactsVersion += 1
         connect()
     }
 
@@ -310,16 +281,5 @@ final class JuniorClient {
 
     func getJSON(_ path: String, _ query: [String: String] = [:]) async throws -> JSON {
         try JSONDecoder().decode(JSON.self, from: try await get(path, query))
-    }
-
-    func loadProjects() async {
-        guard let j = try? await getJSON("/api/projects") else { return }
-        projects = j["projects"]?.array?.compactMap(Project.init) ?? []
-    }
-
-    func artifacts() async throws -> [Artifact] {
-        let j = try await getJSON("/api/artifacts")
-        if j["ok"]?.bool == false { throw ClientError.http(500, j["error"]?.string ?? "") }
-        return (j["artifacts"]?.array ?? []).compactMap(Artifact.init).filter { !$0.hidden }.sorted { $0.updated > $1.updated }
     }
 }

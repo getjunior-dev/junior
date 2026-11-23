@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Brand v2 (.docs/design.md): warm ink canvas, paper text, orange only for "needs you".
+/// Brand v2 (.docs/design.md): warm ink canvas, paper text, sky for Junior, orange only for "needs you".
 enum Theme {
     static let canvas = Color(hex: 0x0C0B0A)
     static let elev = Color(hex: 0x1B1917)
@@ -20,7 +20,8 @@ enum Theme {
 
     static func sans(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font { .custom("Geist", size: size).weight(weight) }
     static func mono(_ size: CGFloat) -> Font { .custom("Geist Mono", size: size) }
-    static func serif(_ size: CGFloat) -> Font { .custom("Instrument Serif", size: size) }
+    /// Headlines only, one per screen (design.md: Varela Round is never for dense UI).
+    static func display(_ size: CGFloat) -> Font { .custom("Varela Round", size: size) }
 }
 
 extension Color {

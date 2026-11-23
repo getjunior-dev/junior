@@ -2,7 +2,7 @@ import Foundation
 import Security
 
 /// The pairing link the Mac's QR code carries: `<base>/api/pair?token=...`.
-/// Loading it in the web view trades the token for a cookie, then lands on Junior.
+/// The app never opens it: it keeps the base and sends the token as a Bearer header.
 enum Pairing {
     static func parse(_ raw: String) -> URL? {
         let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -15,15 +15,9 @@ enum Pairing {
         else { return nil }
         return url
     }
-
-    /// Same server: host and port match. Anything else opens in Safari.
-    static func sameServer(_ a: URL, _ b: URL) -> Bool {
-        a.host?.lowercased() == b.host?.lowercased() && a.port == b.port
-    }
 }
 
-/// The pairing link outlives the web view's cookie: if iOS drops the cookie, the
-/// next launch pairs again from here without a new scan.
+/// The pairing link, kept so the next launch connects without a new scan.
 enum Keychain {
     private static let service = "sh.usejunior.junior.phone"
     private static let account = "pair-link"

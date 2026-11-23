@@ -37,7 +37,7 @@
 	<array>
 		<string>Geist.ttf</string>
 		<string>GeistMono.ttf</string>
-		<string>InstrumentSerif-Regular.ttf</string>
+		<string>VarelaRound-Regular.ttf</string>
 	</array>
 	<key>UILaunchScreen</key>
 	<dict>

@@ -10,17 +10,10 @@ struct JuniorApp: App {
         nav.backgroundColor = UIColor(Theme.canvas)
         nav.shadowColor = UIColor(Theme.hair)
         nav.titleTextAttributes = [.foregroundColor: UIColor(Theme.ink), .font: UIFont(name: "Geist-Regular", size: 17) ?? .systemFont(ofSize: 17)]
-        nav.largeTitleTextAttributes = [.foregroundColor: UIColor(Theme.ink), .font: UIFont(name: "InstrumentSerif-Regular", size: 36) ?? .systemFont(ofSize: 34)]
+        nav.largeTitleTextAttributes = [.foregroundColor: UIColor(Theme.ink), .font: UIFont(name: "VarelaRound-Regular", size: 30) ?? .systemFont(ofSize: 30)]
         UINavigationBar.appearance().standardAppearance = nav
         UINavigationBar.appearance().scrollEdgeAppearance = nav
         UINavigationBar.appearance().compactAppearance = nav
-
-        let tab = UITabBarAppearance()
-        tab.configureWithOpaqueBackground()
-        tab.backgroundColor = UIColor(Theme.canvas)
-        tab.shadowColor = UIColor(Theme.hair)
-        UITabBar.appearance().standardAppearance = tab
-        UITabBar.appearance().scrollEdgeAppearance = tab
     }
 
     var body: some Scene {

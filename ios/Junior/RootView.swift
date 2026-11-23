@@ -61,17 +61,17 @@ struct MainView: View {
     let client: JuniorClient
     var onForget: () -> Void
 
-    // `-tab artifacts` opens on Artifacts (debug builds), for checking the Simulator without taps.
-    @State private var tab = UserDefaults.standard.string(forKey: "tab") ?? "chats"
-
     var body: some View {
-        TabView(selection: $tab) {
-            ChatsView(client: client, onForget: onForget)
-                .tabItem { Label("Chats", systemImage: "bubble.left.and.bubble.right") }
-                .tag("chats")
-            ArtifactsView(client: client, onForget: onForget)
-                .tabItem { Label("Artifacts", systemImage: "doc.text") }
-                .tag("artifacts")
+        NavigationStack {
+            List(client.sessions.filter { $0.kind == "dm" }) { s in
+                NavigationLink(value: s.id) { Text(s.title).font(Theme.sans(15)) }
+                    .listRowBackground(Theme.canvas)
+            }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .background(Theme.canvas)
+            .toolbar { ToolbarItem(placement: .topBarLeading) { WorkspaceMenu(client: client, onForget: onForget) } }
+            .navigationDestination(for: String.self) { id in ChatView(client: client, sessionId: id) }
         }
     }
 }

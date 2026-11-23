@@ -58,7 +58,6 @@ struct ChatView: View {
         .background(Theme.canvas)
         .navigationTitle(session?.title ?? "Chat")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar(.hidden, for: .tabBar)
         .onAppear { client.open(sessionId) }
         .onDisappear { client.close(sessionId) }
     }
