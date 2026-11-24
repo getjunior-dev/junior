@@ -80,6 +80,9 @@ import { useChatSide } from './chatSide.js'
 import { composerDrafts } from './composerDrafts.js'
 import { AddTeammate } from './components/AddTeammate.js'
 import { UpdatePrompt } from './components/UpdatePrompt.js'
+import { FIRST_RUN_STEPS, FirstRun } from './components/FirstRun.js'
+import { useAccount } from './account.js'
+import { pendingSteps } from './firstRun.js'
 import { JUNIOR_DM, dmAgent, dmKey, findDm } from '../../core/junior/dms.js'
 import { agentThreads } from '../../core/junior/threads.js'
 import { TeamRail, TeamSidebar, type SidebarPlace } from './components/TeamSidebar.js'
@@ -179,6 +182,9 @@ export function App() {
   // for the sections whose list *is* the panel (see onRailGo); it closes on
   // any navigation, which is how picking a row in it lands you on the row.
   const mobile = useIsMobile()
+  // First run (firstRun.ts): your Junior account before the workspace's Claude check. Not on a phone.
+  const account = useAccount()
+  const firstRunOpen = !mobile && (account === null || pendingSteps(FIRST_RUN_STEPS, account).length > 0)
   // Queued actions waiting on you: they set Junior's face on the rail.
   const pendingActions = usePendingActions()
   // Junior's name and face, everywhere it shows: the rail and the phone's title.
@@ -193,11 +199,11 @@ export function App() {
   // it. Name, colour and description keep their defaults (Settings → Workspace);
   // projects come from Junior's first message on the Junior page.
   useEffect(() => {
-    if (!onboarded && activeWorkspace) {
+    if (!onboarded && activeWorkspace && !firstRunOpen) {
       setWsModal({ kind: 'onboarding', workspace: activeWorkspace })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onboarded, activeWorkspace?.id])
+  }, [onboarded, activeWorkspace?.id, firstRunOpen])
 
   // Junior's log has something new: a dot on the rail until you open the Log tab.
   const logUnread = useLogUnread()
@@ -1125,6 +1131,7 @@ export function App() {
       </div>
 
       <UpdatePrompt />
+      {!mobile && <FirstRun />}
 
       <AddTeammate
         open={addMateOpen}

@@ -9,7 +9,7 @@
  * server; browser-scoped ones (Sessions · Shortcuts) write to localStorage.
  */
 import * as Tabs from '@radix-ui/react-tabs'
-import { type LucideProps, Zap, ShieldCheck, Settings2, Bot, Plug, Folder, Gauge, Sparkles, WandSparkles, BotMessageSquare, Users, Cable, Activity, ScrollText, Palette, SwatchBook, MessagesSquare, Keyboard, Info, RefreshCw, X, Globe } from 'lucide-react'
+import { type LucideProps, Zap, ShieldCheck, Settings2, Bot, Plug, Folder, Gauge, Sparkles, WandSparkles, BotMessageSquare, Users, Cable, Activity, ScrollText, Palette, SwatchBook, MessagesSquare, Keyboard, Info, RefreshCw, X, Globe, UserRound } from 'lucide-react'
 import { type ComponentType, useState, useEffect, useCallback } from 'react'
 import type { Workspace } from '../../../shared/protocol.js'
 import { isTypingTarget, anyDialogOpen } from '../keys.js'
@@ -30,6 +30,7 @@ import { AboutTab, SessionsTab, ShortcutsTab } from './settings/SessionsTab.js'
 import { Loading } from './settings/shared.js'
 import { SourcesTab } from './settings/SourcesTab.js'
 import { WorkspaceTab } from './settings/WorkspaceTab.js'
+import { AccountTab } from './settings/AccountTab.js'
 
 const ICONS: Record<SettingsTab, ComponentType<LucideProps>> = {
   workspace: Settings2,
@@ -52,6 +53,7 @@ const ICONS: Record<SettingsTab, ComponentType<LucideProps>> = {
   themes: SwatchBook,
   sessions: MessagesSquare,
   shortcuts: Keyboard,
+  account: UserRound,
   about: Info,
 }
 
@@ -213,6 +215,9 @@ export function SettingsPage({ workspace, tab, onOpenSystem }: Props) {
                   </Tabs.Content>
                   <Tabs.Content value="shortcuts">
                     <ShortcutsTab />
+                  </Tabs.Content>
+                  <Tabs.Content value="account">
+                    <AccountTab />
                   </Tabs.Content>
                   <Tabs.Content value="about">
                     <AboutTab onOpenSystem={openSystem} />

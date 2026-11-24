@@ -50,6 +50,7 @@ import { taskRoutes } from './routes/tasks.js'
 import { approvalRoutes } from './routes/approvals.js'
 import { learningRoutes } from './routes/learnings.js'
 import { memoryRoutes } from './routes/memory.js'
+import { accountRoutes } from './routes/account.js'
 import { pinRoutes } from './routes/pins.js'
 import { settingsRoutes } from './routes/settings.js'
 import { libraryRoutes } from './routes/library.js'
@@ -85,6 +86,7 @@ const server = http.createServer(async (req, res) => {
   if (await gateRoutes(ctx)) return
   if (await remoteRoute(ctx)) return
   if (await workspaceListRoutes(ctx)) return
+  if (await accountRoutes(ctx)) return
 
   // everything below is scoped to one workspace
   const rt = resolveRuntime(req, url)

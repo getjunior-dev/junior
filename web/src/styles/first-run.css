@@ -1,0 +1,66 @@
+/* First run (FirstRun.tsx): the setup card over the dotted canvas. Mono header with the blue dot
+   and Skip setup; the face, a display headline and one line under it; the step's panel on a
+   hairline card; footer with Back, the step dots and Not now. No shadows: hairlines and a sky glow. */
+.frOverlay { position: fixed; inset: 0; z-index: 95; background: var(--canvas); }
+.frOverlay .frDots { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.frCard {
+  position: fixed; z-index: 96; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; width: min(720px, calc(100vw - 48px)); min-height: min(600px, calc(100vh - 48px)); max-height: calc(100vh - 48px);
+  overflow-y: auto; padding: 18px 22px; outline: none;
+  background: var(--card); color: var(--ink); border: 1px solid var(--hair-strong); border-radius: 22px;
+  box-shadow: 0 0 0 1px var(--ring), 0 0 120px -20px color-mix(in srgb, var(--glow-blue) 70%, transparent);
+}
+.frHead { display: flex; align-items: baseline; gap: 7px; font-size: 0.9231rem; }
+.frDot { align-self: center; width: 6px; height: 6px; border-radius: 50%; background: var(--blue); }
+.frName { color: var(--ink); font-weight: 500; }
+.frTag { font-family: var(--mono); font-size: 0.8462rem; color: var(--ash); }
+.frSkip, .frLink, .frNotNow { border: 0; background: none; font: inherit; cursor: pointer; }
+.frSkip { margin-left: auto; padding: 2px 4px; color: var(--mute); }
+.frSkip:hover:not(:disabled) { color: var(--ink); }
+.frBody { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 18px 0 8px; }
+.frFoot { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; padding-top: 12px; }
+.frLink { display: inline-flex; align-items: center; gap: 4px; padding: 4px 2px; color: var(--mute); }
+.frLink:hover { color: var(--ink); }
+.frPager { display: inline-flex; align-items: center; gap: 12px; font-family: var(--mono); font-size: 0.8462rem; color: var(--ash); }
+.frDots2 { display: inline-flex; gap: 5px; }
+.frDots2 i { width: 5px; height: 5px; border-radius: var(--r-full); background: var(--stone); transition: width 0.15s ease, background 0.15s ease; }
+.frDots2 i.on { width: 22px; background: var(--ink); }
+.frDots2 i.done { background: var(--mute); }
+.frNotNow { justify-self: end; height: 36px; padding: 0 16px; border: 1px solid var(--hair-strong); border-radius: var(--r-full); background: var(--elev); color: var(--ink); font-weight: 500; }
+.frNotNow:hover:not(:disabled) { border-color: var(--hair-bright); }
+.frSkip:disabled, .frNotNow:disabled { opacity: 0.45; cursor: default; }
+
+/* The account step. */
+.frAccount { display: flex; flex-direction: column; align-items: center; }
+.frFace { display: grid; place-items: center; padding: 6px 0 14px; }
+h2.frTitle { margin: 0; font-family: var(--display); -webkit-text-stroke: var(--display-stroke) currentColor; paint-order: stroke fill; font-weight: 400; font-size: 2rem; line-height: 1.2; letter-spacing: -0.01em; text-align: center; }
+.frSub { margin: 8px 0 0; color: var(--mute); text-align: center; text-wrap: balance; }
+.frPanel { width: min(440px, 100%); margin-top: 22px; padding: 14px 16px 16px; border: 1px solid var(--hair-strong); border-radius: var(--r-lg); background: var(--wash-1); }
+.frModes { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 2px; border: 1px solid var(--hair); border-radius: var(--r-full); background: var(--deep); }
+.frMode { height: 28px; border: 0; border-radius: var(--r-full); background: none; color: var(--mute); font: inherit; font-size: 0.9231rem; cursor: pointer; }
+.frMode:hover { color: var(--ink); }
+.frMode[data-state="active"] { background: var(--elev); color: var(--ink); box-shadow: 0 0 0 1px var(--hair-strong); }
+.frMode:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+.frForm { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.frField { display: flex; flex-direction: column; gap: 5px; }
+.frField > span { font-size: 0.9231rem; color: var(--mute); }
+.frField input {
+  width: 100%; height: 36px; padding: 0 10px; border: 1px solid var(--hair-strong); border-radius: var(--r);
+  background: var(--canvas); color: var(--ink); font: inherit; outline: none; transition: border-color 0.12s;
+}
+.frField input:focus { border-color: var(--ink); }
+.frField input::placeholder { color: var(--stone); }
+.frField input[aria-invalid="true"] { border-color: var(--edge-red); }
+.frErr { color: var(--red); font-size: 0.8846rem; line-height: 1.4; }
+.frErrLine { padding: 2px 0; }
+.frSubmitRow { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+.frServer { margin-right: auto; font-family: var(--mono); font-size: 0.8077rem; color: var(--ash); }
+.frGo { height: 34px; padding: 0 16px; border: 1px solid var(--ink); border-radius: var(--r-full); background: var(--ink); color: var(--on-primary); font: inherit; font-weight: 500; cursor: pointer; }
+.frGo:hover:not(:disabled) { background: var(--primary-hover); border-color: var(--primary-hover); }
+.frGo:disabled { opacity: 0.45; cursor: default; }
+.frGo:focus-visible, .frNotNow:focus-visible, .frSkip:focus-visible, .frLink:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+@media (max-width: 767px) {
+  .frCard { inset: 0; top: 0; left: 0; transform: none; width: auto; min-height: 0; max-height: none; border-radius: 0; border: 0; }
+}
+.setAccountForm .frPanel { margin-top: 4px; }

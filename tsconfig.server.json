@@ -40,6 +40,7 @@
     "web/src/typed.ts",
     "web/src/usageFormat.ts",
     "web/src/chatSide.ts",
+    "web/src/firstRun.ts",
     "web/src/tabStrip.ts",
     "web/src/app/tabKeys.ts",
     "desktop/src/tabs-model.ts",
