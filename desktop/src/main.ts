@@ -139,6 +139,10 @@ function start() {
     window: () => frontWindow() ?? (showWindow(), frontWindow()),
     changed: showUpdateState,
     beforeInstall: prepareQuit,
+    prompted: (p) => {
+      for (const wc of host.pages()) wc.send('update:prompt', p)
+    },
+    hasPages: () => host.pages().length > 0,
   })
 }
 

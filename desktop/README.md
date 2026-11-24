@@ -114,8 +114,13 @@ ID it signs ad-hoc, as before; `JUNIOR_SIGN=adhoc` forces that.
 - **`curl | sh`** works as before.
 - **Updates**: a release build checks the latest GitHub release 30s after launch
   and every 4 hours (`src/updater.ts`, electron-updater). It downloads in the
-  background, then offers Restart to Update (menu, menu-bar icon, a
-  notification). It also installs on the next quit. After the relaunch the app
+  background, then every page shows the update prompt
+  (`web/src/components/UpdatePrompt.tsx`): Update now restarts onto it, Not now
+  puts it off for a day (`src/update-prompt.ts`; a newer release asks at once).
+  Restart to Update in the menu and the menu-bar icon bring it back, and a
+  notification goes up when the app isn't in front. It also installs on the
+  next quit. `JUNIOR_UPDATE_PREVIEW=1.2.3` fakes a downloaded release on any
+  build, to see the prompt. After the relaunch the app
   restarts the old server when no session is mid-turn. Snapshots
   (`1.0.4-dev.g…`) and the dev app never update. `JUNIOR_NO_UPDATES=1` turns it
   off. Log: `~/Library/Logs/Junior/updates.log`.

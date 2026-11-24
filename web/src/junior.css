@@ -220,6 +220,23 @@ a.jrRef { overflow-wrap: anywhere; }
 .addMate .amRole { padding: 2px 10px; border: 1px solid var(--hair-strong); border-radius: var(--r-full); background: none; color: var(--ink); font: inherit; cursor: pointer; }
 .addMate .amRole:hover { background: var(--wash-2); }
 
+/* The update prompt (UpdatePrompt.tsx): Junior.app's release waiting. Small mono header, the face,
+   a display headline, what's new on a hairline card, then the version and the two verbs. */
+.uiDialog.updPrompt { width: 460px; padding: 18px 22px 18px; }
+.updPrompt .upHead { display: flex; align-items: baseline; gap: 7px; font-size: 0.9231rem; }
+.updPrompt .upDot { align-self: center; width: 6px; height: 6px; border-radius: 50%; background: var(--blue); }
+.updPrompt .upName { color: var(--ink); font-weight: 500; }
+.updPrompt .upTag { font-family: var(--mono); font-size: 0.8462rem; color: var(--ash); }
+.updPrompt .upFace { display: grid; place-items: center; padding: 22px 0 12px; }
+.updPrompt h3.upTitle { margin: 0; font-family: var(--display); -webkit-text-stroke: var(--display-stroke) currentColor; paint-order: stroke fill; font-weight: 400; font-size: 1.6rem; line-height: 1.2; letter-spacing: -0.01em; text-align: center; }
+.updPrompt .upSub { margin: 8px 0 0; color: var(--mute); text-align: center; text-wrap: balance; }
+.updPrompt .upNotes { margin-top: 18px; padding: 12px 14px; border: 1px solid var(--hair); border-radius: var(--r-lg); background: var(--wash-1); }
+.updPrompt .upNotesH { font-family: var(--mono); font-size: 0.8077rem; color: var(--ash); text-transform: lowercase; }
+.updPrompt .upNotes ul { margin: 6px 0 0; padding-left: 16px; color: var(--body); line-height: 1.5; }
+.updPrompt .upNotes li + li { margin-top: 2px; }
+.updPrompt .row { margin-top: 22px; }
+.updPrompt .upVer { margin-right: auto; font-family: var(--mono); font-size: 0.8462rem; color: var(--ash); }
+
 /* Junior's log (JuniorLog.tsx): one feed, All · Sent. Dense aligned rows: when · icon · what + who allowed it · link · state. */
 .jlFilters { display: flex; align-items: baseline; gap: 4px; margin: 24px 0 8px; }
 .jlFilter { padding: 3px 10px; border: 1px solid transparent; border-radius: var(--r-full); background: none; color: var(--ash); font-size: 0.9231rem; cursor: pointer; }

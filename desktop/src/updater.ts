@@ -8,14 +8,20 @@
  * running app, so only a release build looks: never an unpackaged dev app, and
  * never a snapshot (its version carries a prerelease label like 1.0.4-dev.g1a2b).
  *
+ * Once a release is downloaded, every page shows the update prompt
+ * (web/src/components/UpdatePrompt.tsx): Update now restarts onto it, Not now
+ * holds it for a day (update-prompt.ts). The menu and the tray bring it back.
+ * JUNIOR_UPDATE_PREVIEW=<version> fakes a downloaded release, to see the card.
+ *
  * The daemon runs from inside the bundle and keeps running across the swap.
  * After the relaunch the app finds it on the old version and restarts it when
  * no session is mid-turn (main.ts `connect`).
  */
-import { app, dialog, Notification, type BrowserWindow } from 'electron'
+import { app, dialog, ipcMain, Notification, type BrowserWindow } from 'electron'
 import electronUpdater from 'electron-updater'
 import fs from 'node:fs'
 import path from 'node:path'
+import { parseDismissed, releaseNoteLines, shouldPrompt, type Dismissed, type UpdatePrompt } from './update-prompt.js'
 
 const { autoUpdater } = electronUpdater
 
@@ -23,6 +29,8 @@ const { autoUpdater } = electronUpdater
 const CHECK_EVERY_MS = 4 * 60 * 60 * 1000
 /** The first look waits for the window and the daemon to settle. */
 const FIRST_CHECK_MS = 30 * 1000
+/** A snoozed prompt is looked at again this often. */
+const PROMPT_TICK_MS = 15 * 60 * 1000
 
 export type UpdateState =
   | { kind: 'off' }
@@ -38,6 +46,10 @@ type Host = {
   changed: (state: UpdateState) => void
   /** Flush and close everything that would hold the quit up. */
   beforeInstall: () => Promise<void>
+  /** Every page's prompt: the release waiting, or null to put it away. */
+  prompted: (prompt: UpdatePrompt | null) => void
+  /** Pages there are to show the prompt in; none = the native dialog instead. */
+  hasPages: () => boolean
 }
 
 let host: Host | null = null
@@ -45,6 +57,10 @@ let state: UpdateState = { kind: 'off' }
 // A check started from the menu answers with a dialog, even "up to date".
 let asked = false
 let notified = ''
+let notes: string[] = []
+let prompt: UpdatePrompt | null = null
+let dismissed: Dismissed | null = null
+const preview = process.env.JUNIOR_UPDATE_PREVIEW?.trim() ?? ''
 
 export function updateState(): UpdateState {
   return state
@@ -56,6 +72,12 @@ export function updatesEnabled(): boolean {
 
 export function startUpdater(h: Host): void {
   host = h
+  ipcMain.handle('update:prompt', () => prompt)
+  ipcMain.on('update:install', () => void install())
+  ipcMain.on('update:later', () => later())
+  dismissed = readDismissed()
+  setInterval(() => offer(false), PROMPT_TICK_MS)
+  if (preview) return startPreview()
   if (!updatesEnabled()) return
   autoUpdater.logger = fileLogger()
   autoUpdater.autoDownload = true
@@ -73,11 +95,17 @@ export function startUpdater(h: Host): void {
     }
   })
   autoUpdater.on('update-downloaded', (info) => {
+    notes = releaseNoteLines(info.releaseNotes)
     set({ kind: 'ready', version: info.version })
     if (asked) {
       asked = false
       void promptInstall()
-    } else if (notified !== info.version) {
+      return
+    }
+    offer(false)
+    // Away from the app: a notification too, which opens the window on the prompt.
+    const focused = host?.window()?.isFocused() ?? false
+    if (!focused && notified !== info.version) {
       notified = info.version
       notify(info.version)
     }
@@ -115,9 +143,14 @@ export function checkFromMenu(): void {
   void check()
 }
 
-/** Ask, then quit and relaunch on the new version. */
+/** Show the prompt, even one put off with Not now: in the pages, else as a native dialog. */
 export async function promptInstall(): Promise<void> {
   if (state.kind !== 'ready') return
+  if (host?.hasPages()) {
+    host.window()?.show()
+    offer(true)
+    return
+  }
   const { version } = state
   const win = host?.window() ?? undefined
   const opts = {
@@ -132,7 +165,31 @@ export async function promptInstall(): Promise<void> {
   if (response === 0) await install()
 }
 
+/** Put the prompt in every page when it's due (or always, when asked for). */
+function offer(force: boolean) {
+  if (state.kind !== 'ready') return
+  if (!force && !shouldPrompt(state.version, dismissed, Date.now())) return
+  if (prompt?.version === state.version) return
+  prompt = { version: state.version, current: app.getVersion(), notes }
+  host?.prompted(prompt)
+}
+
+/** Not now: away everywhere, back in a day or with a newer release. */
+function later() {
+  if (!prompt) return
+  dismissed = { version: prompt.version, at: Date.now() }
+  prompt = null
+  host?.prompted(null)
+  writeDismissed(dismissed)
+}
+
 async function install(): Promise<void> {
+  if (state.kind !== 'ready') return
+  if (preview) {
+    prompt = null
+    host?.prompted(null)
+    return void tell('This is a preview of the update prompt.', `JUNIOR_UPDATE_PREVIEW is set, so nothing was installed. Unset it to update for real.`)
+  }
   await host?.beforeInstall().catch(() => {})
   // isSilent false, isForceRunAfter true: relaunch on the new version.
   autoUpdater.quitAndInstall(false, true)
@@ -150,6 +207,34 @@ async function check(): Promise<void> {
 function set(next: UpdateState) {
   state = next
   host?.changed(state)
+}
+
+/** JUNIOR_UPDATE_PREVIEW: a fake release, downloaded, so the prompt can be seen on any build. */
+function startPreview() {
+  setTimeout(() => {
+    notes = ['This is a preview of the update prompt.', 'Update now does nothing while JUNIOR_UPDATE_PREVIEW is set.']
+    dismissed = null
+    set({ kind: 'ready', version: preview })
+    offer(false)
+  }, 3000)
+}
+
+const dismissedFile = () => path.join(app.getPath('userData'), 'update-prompt.json')
+
+function readDismissed(): Dismissed | null {
+  try {
+    return parseDismissed(JSON.parse(fs.readFileSync(dismissedFile(), 'utf8')))
+  } catch {
+    return null
+  }
+}
+
+function writeDismissed(d: Dismissed) {
+  try {
+    fs.writeFileSync(dismissedFile(), JSON.stringify(d))
+  } catch {
+    // best effort: without it, Not now lasts until the app quits
+  }
 }
 
 function notify(version: string) {

@@ -107,3 +107,35 @@ export function useDesktopTabs(): DesktopTabsState | null {
   }, [])
   return s
 }
+
+/**
+ * The update prompt (desktop/src/updater.ts): a release downloaded and waiting.
+ * Keep in step with desktop/src/update-prompt.ts. Optional: an older
+ * Junior.app has no `update`, and its native dialog still asks.
+ */
+export type DesktopUpdate = { version: string; current: string; notes: string[] }
+
+type UpdateBridge = {
+  prompt: () => Promise<DesktopUpdate | null>
+  onPrompt: (cb: (p: DesktopUpdate | null) => void) => () => void
+  install: () => void
+  later: () => void
+}
+
+const updateBridge: UpdateBridge | null = (() => {
+  const u = (bridge as { update?: Partial<UpdateBridge> } | null)?.update
+  return u && typeof u.onPrompt === 'function' && typeof u.install === 'function' ? (u as UpdateBridge) : null
+})()
+
+export const desktopUpdate = updateBridge
+
+/** The release waiting to be installed, live; null when there is none or it was put off. */
+export function useDesktopUpdate(): DesktopUpdate | null {
+  const [p, setP] = useState<DesktopUpdate | null>(null)
+  useEffect(() => {
+    if (!updateBridge) return
+    void updateBridge.prompt().then(setP)
+    return updateBridge.onPrompt(setP)
+  }, [])
+  return p
+}

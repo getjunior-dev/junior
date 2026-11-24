@@ -79,6 +79,7 @@ import { ChatSide } from './components/ChatSide.js'
 import { useChatSide } from './chatSide.js'
 import { composerDrafts } from './composerDrafts.js'
 import { AddTeammate } from './components/AddTeammate.js'
+import { UpdatePrompt } from './components/UpdatePrompt.js'
 import { JUNIOR_DM, dmAgent, dmKey, findDm } from '../../core/junior/dms.js'
 import { agentThreads } from '../../core/junior/threads.js'
 import { TeamRail, TeamSidebar, type SidebarPlace } from './components/TeamSidebar.js'
@@ -1122,6 +1123,8 @@ export function App() {
         </div>
         </>
       </div>
+
+      <UpdatePrompt />
 
       <AddTeammate
         open={addMateOpen}

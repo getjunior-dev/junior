@@ -1,7 +1,8 @@
 // The renderer's door to the main process. CommonJS because sandboxed
 // preloads can't be ES modules. The splash (file:) gets retry/log/status; the
 // quick-capture window (file:) gets submit/close; the web UI gets only what its
-// desktop chrome needs: ← → and their state, the browser pane's controls, and its workspace tabs.
+// desktop chrome needs: ← → and their state, the browser pane's controls, its workspace tabs
+// and the update prompt.
 const { contextBridge, ipcRenderer } = require('electron')
 
 if (location.protocol === 'file:' && location.pathname.endsWith('/capture.html')) {
@@ -74,6 +75,14 @@ else {
       // { tabKey, key: 'focus-url' | 'find' | 'reload' | 'back' | 'forward' }, pressed in the page.
       // reload, back and forward already happened; focus-url and find are the pane's to do.
       onKey: (cb) => on('browser:key', cb),
+    },
+    // The update prompt (desktop/src/updater.ts): { version, current, notes } once a
+    // release is downloaded, null when it's put away. Missing in an older Junior.app.
+    update: {
+      prompt: () => ipcRenderer.invoke('update:prompt'),
+      onPrompt: (cb) => on('update:prompt', cb),
+      install: () => ipcRenderer.send('update:install'),
+      later: () => ipcRenderer.send('update:later'),
     },
     // Workspace tabs (desktop/src/tabs.ts): this page is one tab's view; the
     // strip it draws comes from the window's tab list, pushed on every change.

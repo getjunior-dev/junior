@@ -43,6 +43,7 @@
     "web/src/tabStrip.ts",
     "web/src/app/tabKeys.ts",
     "desktop/src/tabs-model.ts",
+    "desktop/src/update-prompt.ts",
     "web/src/components/browser/steps.ts",
     "vite.config.ts"
   ]
