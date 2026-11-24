@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Hardened-runtime entitlements for every binary in Junior.app: the Electron
+  shell and its helpers, and the plain executables under Resources (the bundled
+  node, node-pty, the Agent SDK's claude). Not sandboxed, so each process runs
+  on its own signature's entitlements, never its parent's.
+
+  - allow-jit / allow-unsigned-executable-memory: V8 (Electron, node) and
+    JavaScriptCore (claude is a Bun binary) generate code at runtime.
+  - disable-executable-page-protection / allow-dyld-environment-variables:
+    what Bun's own docs ask for when a compiled binary is signed.
+  - disable-library-validation: node loads native addons (node-pty's pty.node)
+    and the daemon spawns tools signed by other teams.
+-->
+<plist version="1.0">
+  <dict>
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <key>com.apple.security.cs.disable-executable-page-protection</key>
+    <true/>
+    <key>com.apple.security.cs.allow-dyld-environment-variables</key>
+    <true/>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+  </dict>
+</plist>

@@ -36,11 +36,11 @@ server is Node: nothing in `server/` or `core/` is ported.
   the app can be tested against an isolated daemon without touching prod.
 - **URL** = `http://localhost:<port>/`. Loopback socket + loopback `Host`
   counts as "local" in `server/remote.ts`, so no pairing.
-- **Distribution without an Apple Developer ID**: ad-hoc signed
-  (`codesign --force --deep -s -`), shipped as a zip on the GitHub release,
-  installed by `curl -fsSL https://getjunior.dev/install.sh | sh` (curl sets no
-  quarantine xattr; the script strips it anyway). Homebrew is not an escape
-  hatch — unsigned casks are gone from the official tap.
+- **Distribution**: Developer ID signed, hardened runtime, notarized. Each
+  release carries a zip per arch (`install.sh` and the updater use it), a dmg
+  per arch under a stable name (the browser download), and `latest-mac.yml`
+  (the updater's feed). The app updates itself (`src/updater.ts`); builds
+  without a Developer ID are ad-hoc signed and never update.
 
 ## Files
 
@@ -56,7 +56,7 @@ server is Node: nothing in `server/` or `core/` is ported.
 | `src/browser-wire.ts` | a copy of the wire (`../core/browser/wire.ts`) and of `partitionOf` / `siteOf` (`../core/browser/profiles.ts`): desktop can't import outside `src/` |
 | `src/preload.cjs` | tiny preload (CommonJS): exposes `window.juniorDesktop` (window chrome, the browser pane's controls, workspace tabs) |
 | `src/splash.html` | the "starting junior…" / error page shown before the daemon answers |
-| `scripts/build.mjs` | root build → stage server → fetch Node → electron-builder → ad-hoc sign → zip/dmg |
+| `scripts/build.mjs` | root build → stage server → fetch Node → electron-builder (Developer ID + notarize, or ad-hoc) → zip/dmg |
 | `scripts/icon.mjs` | `build/icon.icns` from `web/public/icon-1024.png` |
 | `electron-builder.yml` | packaging config |
 | `../install.sh` | the `curl \| sh` installer |

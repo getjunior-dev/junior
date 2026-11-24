@@ -1,7 +1,7 @@
 # Packaging for Junior.app. Driven by scripts/build.mjs, which stages
 # .stage/junior (the usejunior package + prod node_modules) and .stage/node
 # (official Node binary) first, passes the version from the root package.json,
-# then ad-hoc signs the app and zips it with ditto.
+# picks the signing identity, then zips the app with ditto (and makes the dmg).
 appId: sh.usejunior.app
 productName: Junior
 copyright: Copyright © 2026 Junior
@@ -35,6 +35,8 @@ extraResources:
       - '**/*'
       - '!.version'
 
+afterPack: scripts/after-pack.cjs
+
 # No native modules in the shell itself.
 npmRebuild: false
 nodeGypRebuild: false
@@ -45,10 +47,15 @@ mac:
     - dir
   category: public.app-category.developer-tools
   icon: build/icon.icns
-  # No Developer ID: electron-builder leaves the app unsigned and build.mjs
-  # signs it ad-hoc after packing.
+  # build.mjs passes -c.mac.identity=<sha1> when a Developer ID Application
+  # identity is in the keychain: electron-builder then signs every Mach-O in
+  # the bundle (Resources included) with the hardened runtime and notarizes
+  # when APPLE_API_KEY* or APPLE_KEYCHAIN_PROFILE is set. Without one it stays
+  # null here and build.mjs signs the app ad-hoc after packing.
   identity: null
-  hardenedRuntime: false
+  hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
   gatekeeperAssess: false
   minimumSystemVersion: '12.0'
   artifactName: Junior-${version}-mac-${arch}.${ext}

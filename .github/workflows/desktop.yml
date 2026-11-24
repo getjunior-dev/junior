@@ -1,5 +1,13 @@
-# Builds Junior.app for both Mac architectures on a release tag, attaches the
-# zips and install.sh to that tag's GitHub release, then publishes it.
+# Builds Junior.app for both Mac architectures on a release tag, signed with
+# the Developer ID and notarized, attaches the zips, the dmgs, install.sh and
+# the updater's latest-mac.yml to that tag's GitHub release, then publishes it.
+#
+# Secrets (repo → Settings → Secrets and variables → Actions):
+#   MAC_CERT_P12        the "Developer ID Application" certificate + key, .p12, base64
+#   MAC_CERT_PASSWORD   the .p12's export password
+#   APPLE_API_KEY_P8    an App Store Connect API key (.p8 contents), for notarytool
+#   APPLE_API_KEY_ID    that key's ID
+#   APPLE_API_ISSUER    the issuer ID shown above the keys list
 #
 # /release pushes the tag and creates the release as a draft, so each job
 # builds first and then waits for the release to exist. Creating the release is
@@ -69,7 +77,38 @@ jobs:
 
       - run: npm ci
       - run: npm --prefix desktop ci
-      - run: npm run app:build -- --arch ${{ matrix.arch }}
+
+      # A throwaway keychain holding only the Developer ID, first in the search
+      # list so build.mjs and electron-builder find it.
+      - name: Signing keychain
+        env:
+          MAC_CERT_P12: ${{ secrets.MAC_CERT_P12 }}
+          MAC_CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+        run: |
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          password=$(openssl rand -hex 16)
+          printf '%s' "$MAC_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          security import "$RUNNER_TEMP/cert.p12" -P "$MAC_CERT_PASSWORD" -A -t cert -f pkcs12 -k "$keychain"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$password" "$keychain" >/dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/cert.p12"
+          security find-identity -v -p codesigning "$keychain"
+
+      - name: Notary key
+        env:
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+        run: |
+          printf '%s' "$APPLE_API_KEY_P8" > "$RUNNER_TEMP/notary.p8"
+          echo "APPLE_API_KEY=$RUNNER_TEMP/notary.p8" >> "$GITHUB_ENV"
+
+      # --release: refuses to build unless it signs and notarizes.
+      - run: npm run app:build -- --arch ${{ matrix.arch }} --dmg --release
+        env:
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
 
       - name: Check the artifact
         run: |
@@ -78,7 +117,12 @@ jobs:
           ls -lh "$zip"
           rm -rf /tmp/check && ditto -x -k "$zip" /tmp/check
           codesign --verify --deep --strict /tmp/check/Junior.app
+          spctl --assess --type execute --verbose /tmp/check/Junior.app
+          xcrun stapler validate /tmp/check/Junior.app
           lipo -archs /tmp/check/Junior.app/Contents/MacOS/Junior
+          # The browser download: a stable name, so getjunior.dev can link
+          # releases/latest/download/Junior-mac-<arch>.dmg.
+          cp "desktop/release/Junior-$VERSION-mac-${{ matrix.arch }}.dmg" "desktop/release/Junior-mac-${{ matrix.arch }}.dmg"
 
       - name: Wait for the release
         run: |
@@ -91,7 +135,15 @@ jobs:
           exit 1
 
       - name: Upload
-        run: gh release upload "$TAG" "desktop/release/Junior-$VERSION-mac-${{ matrix.arch }}.zip" --repo "$GITHUB_REPOSITORY" --clobber
+        run: |
+          gh release upload "$TAG" \
+            "desktop/release/Junior-$VERSION-mac-${{ matrix.arch }}.zip" \
+            "desktop/release/Junior-mac-${{ matrix.arch }}.dmg" \
+            --repo "$GITHUB_REPOSITORY" --clobber
+
+      - name: Drop the keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/signing.keychain-db" 2>/dev/null || true
 
   # Only once both archs are up: a published release without its zips is a
   # broken `curl | sh` for anyone who installs in between.
@@ -111,6 +163,17 @@ jobs:
       # redirects to releases/latest/download/install.sh.
       - name: Upload install.sh
         run: gh release upload "$TAG" install.sh --repo "$GITHUB_REPOSITORY" --clobber
+
+      # The updater's feed, written from the zips as uploaded. Last before
+      # publishing: a running app sees the release only once this is there.
+      - name: Upload latest-mac.yml
+        run: |
+          version="${TAG#v}"
+          mkdir -p "$RUNNER_TEMP/zips"
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "Junior-$version-mac-*.zip" --dir "$RUNNER_TEMP/zips"
+          node desktop/scripts/update-feed.mjs "$version" "$RUNNER_TEMP"/zips/*.zip --out "$RUNNER_TEMP/latest-mac.yml"
+          cat "$RUNNER_TEMP/latest-mac.yml"
+          gh release upload "$TAG" "$RUNNER_TEMP/latest-mac.yml" --repo "$GITHUB_REPOSITORY" --clobber
 
       - name: Publish
         run: gh release edit "$TAG" --draft=false --repo "$GITHUB_REPOSITORY"

@@ -82,7 +82,7 @@ npm run app:build -- --arch x64     # or arm64
 
 [`scripts/build.mjs`](scripts/build.mjs) runs the root build, stages the package
 with production deps, fetches Node into `.cache/`, packs with electron-builder,
-ad-hoc signs, and zips with `ditto`:
+signs (Developer ID when the keychain has one, else ad-hoc), and zips with `ditto`:
 `desktop/release/Junior-<version>-mac-<arch>.zip`. Try it with the installer
 before a release exists:
 
@@ -91,24 +91,37 @@ JUNIOR_APP_ZIP=desktop/release/Junior-1.0.4-mac-arm64.zip sh install.sh
 ```
 
 Releases build both arches in CI ([`.github/workflows/desktop.yml`](../.github/workflows/desktop.yml)):
-pushing a `v*` tag builds on macos-15 (arm64) and macos-15-intel (x64), waits
-for `/release` to create the GitHub release, and uploads the zips to it. For a
-tag that already has a release, run the workflow by hand with that tag.
+pushing a `v*` tag builds on macos-15 (arm64) and macos-15-intel (x64), signed
+and notarized, waits for `/release` to create the GitHub release, and uploads
+the zips and the dmgs (`Junior-mac-<arch>.dmg`, a stable name) to it. The publish
+job writes `latest-mac.yml` for the updater. For a tag that already has a
+release, run the workflow by hand with that tag.
 
-## Signing
+## Signing, notarizing, updates
 
-There's no Apple Developer ID yet, so the app is **ad-hoc signed**
-(`codesign -s -`), not notarized. What that means in practice:
+Releases are signed with the **Developer ID Application** certificate, with the
+hardened runtime (`build/entitlements.mac.plist`), and notarized. CI holds the
+certificate and an App Store Connect API key as secrets (the list is at the top
+of `desktop.yml`). Locally, `build.mjs` signs with a Developer ID found in the
+keychain and notarizes when `APPLE_API_KEY` + `APPLE_API_KEY_ID` +
+`APPLE_API_ISSUER` (or `APPLE_KEYCHAIN_PROFILE`) are set. Without a Developer
+ID it signs ad-hoc, as before; `JUNIOR_SIGN=adhoc` forces that.
 
-- `curl | sh` installs open without a Gatekeeper prompt: curl sets no
-  quarantine attribute, and the installer strips it anyway.
-- A zip downloaded **in a browser** gets quarantined, and macOS refuses the app
-  ("cannot be opened" / "damaged"). Use the installer, or run
-  `xattr -dr com.apple.quarantine /Applications/Junior.app`.
-- There's no auto-update. Run the installer again to upgrade. If the daemon was
-  started from the old app, it keeps running the old code until you restart it.
-  The installer tells you when that's the case.
-- Homebrew isn't an option: the official tap no longer takes unsigned casks.
+- **Browser download**: `Junior-mac-<arch>.dmg` on the latest release opens
+  with no Gatekeeper prompt. Drag Junior to Applications; on first launch the
+  app writes the LaunchAgent itself. The `junior` CLI shims still come from
+  `install.sh` only.
+- **`curl | sh`** works as before.
+- **Updates**: a release build checks the latest GitHub release 30s after launch
+  and every 4 hours (`src/updater.ts`, electron-updater). It downloads in the
+  background, then offers Restart to Update (menu, menu-bar icon, a
+  notification). It also installs on the next quit. After the relaunch the app
+  restarts the old server when no session is mid-turn. Snapshots
+  (`1.0.4-dev.g…`) and the dev app never update. `JUNIOR_NO_UPDATES=1` turns it
+  off. Log: `~/Library/Logs/Junior/updates.log`.
+- An app that was ad-hoc signed can't auto-update to a Developer ID one
+  (Squirrel checks the signature matches). Those installs move over once by
+  running the installer or the dmg.
 
 ## Uninstall
 

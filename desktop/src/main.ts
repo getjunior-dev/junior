@@ -31,6 +31,7 @@ import { BrowserHost } from './browser.js'
 import { CAPTURE_HOTKEY, startCapture, stopCapture, toggleCapture } from './capture.js'
 import { PORT, UI_PORT, daemonUrl, ensureDaemon, logFile, probe, restartDaemon, type DaemonHealth } from './daemon.js'
 import { WorkspaceTabsHost } from './tabs.js'
+import { checkFromMenu, promptInstall, startUpdater, updateState, type UpdateState } from './updater.js'
 import type { SavedWindow } from './tabs-model.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
@@ -134,6 +135,21 @@ function start() {
   restoreWindows()
   void connect()
   setInterval(watchdog, 5000)
+  startUpdater({
+    window: () => frontWindow() ?? (showWindow(), frontWindow()),
+    changed: showUpdateState,
+    beforeInstall: prepareQuit,
+  })
+}
+
+/** Junior ▸ Check for Updates… turns into Restart to Update once one is downloaded. */
+function showUpdateState(state: UpdateState) {
+  const menu = Menu.getApplicationMenu()
+  const ready = state.kind === 'ready'
+  const check = menu?.getMenuItemById('update-check')
+  const restart = menu?.getMenuItemById('update-ready')
+  if (check) check.visible = state.kind !== 'off' && !ready
+  if (restart) restart.visible = ready
 }
 
 /** View ▸ Hide Workspace Names: the daemon keeps it and tells every page. Unreachable: the tick goes back. */
@@ -293,7 +309,15 @@ async function connect(how: 'ensure' | 'restart' = 'ensure') {
     setSplash({ state: 'starting', text: how === 'restart' ? 'Restarting Junior…' : 'Looking for Junior…' })
     toSplash()
     if (how === 'restart') await restartDaemon()
-    else await ensureDaemon((text) => setSplash({ state: 'starting', text }))
+    else {
+      const health = await ensureDaemon((text) => setSplash({ state: 'starting', text }))
+      // After an app update the old server still runs, from inside the new
+      // bundle. With nothing mid-turn, restarting it costs nothing.
+      if (isStale(health) && health.liveSessions === 0) {
+        setSplash({ state: 'starting', text: `Updating Junior to v${app.getVersion()}…` })
+        await restartDaemon()
+      }
+    }
     offSplash()
     await tabs?.connected()
   } catch (err) {
@@ -407,6 +431,8 @@ function buildMenu(): Menu {
       label: app.name,
       submenu: [
         { role: 'about' },
+        { id: 'update-check', label: 'Check for Updates…', click: checkFromMenu },
+        { id: 'update-ready', label: 'Restart to Update Junior…', visible: false, click: () => void promptInstall() },
         { type: 'separator' },
         { label: 'Open in Browser', click: () => void shell.openExternal(daemonUrl()) },
         { label: 'Open server log', click: () => void openLog() },
@@ -517,6 +543,7 @@ function createTray() {
 async function trayMenu(): Promise<Menu> {
   // Don't let a hung port hold the menu up.
   const health = await Promise.race([probe(), new Promise<undefined>((r) => setTimeout(r, 600))])
+  const update = updateState()
   return Menu.buildFromTemplate([
     { label: 'Open Junior', click: showWindow },
     // Shown, not registered: the global shortcut already answers it.
@@ -525,6 +552,9 @@ async function trayMenu(): Promise<Menu> {
     // Never restarted for you: it would stop live sessions.
     ...(isStale(health)
       ? [{ label: 'Restart to update server…', click: () => void confirmRestart(`Restart Junior to update its server to v${app.getVersion()}?`) }]
+      : []),
+    ...(update.kind === 'ready'
+      ? [{ label: `Restart to update Junior to v${update.version}…`, click: () => void promptInstall() }]
       : []),
     { type: 'separator' },
     { label: 'Open in Browser', click: () => void shell.openExternal(daemonUrl()) },
@@ -647,6 +677,16 @@ function saveSoon() {
 // (a login made a few seconds before ⌘Q would otherwise be lost), then its
 // tabs and parking window close, so nothing holds the quit up.
 let flushed = false
+
+/** Before an update's quit: the same flush, done up front so nothing cancels that quit. */
+async function prepareQuit() {
+  quitting = true
+  if (flushed || !browser) return
+  flushed = true
+  await Promise.race([browser.flush(), new Promise((r) => setTimeout(r, 2000))])
+  browser.shutdown()
+}
+
 app.on('before-quit', (e) => {
   quitting = true
   if (flushed || !browser) return

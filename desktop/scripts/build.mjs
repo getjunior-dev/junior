@@ -1,8 +1,17 @@
 // Builds Junior.app: root build → stage the usejunior package with its prod
 // deps → fetch an official Node → compile the Electron main → icon →
-// electron-builder (dir) → ad-hoc sign → zip (and optionally a dmg).
+// electron-builder (dir) → sign → zip (and optionally a dmg).
 //
-//   node scripts/build.mjs [--arch arm64|x64] [--skip-root-build] [--dmg]
+//   node scripts/build.mjs [--arch arm64|x64] [--skip-root-build] [--dmg] [--release]
+//
+// Signing: a "Developer ID Application" identity in the keychain is used when
+// there is one (JUNIOR_SIGN_IDENTITY picks one by name or SHA-1, JUNIOR_SIGN=adhoc
+// skips it). electron-builder then signs the whole bundle with the hardened
+// runtime and notarizes it when Apple credentials are in the environment:
+// APPLE_API_KEY (path to the .p8) + APPLE_API_KEY_ID + APPLE_API_ISSUER, or
+// APPLE_KEYCHAIN_PROFILE (a `xcrun notarytool store-credentials` profile).
+// The dmg is signed and notarized the same way. No identity: ad-hoc, as before.
+// --release refuses to build unless it will be signed and notarized (CI).
 //
 // Idempotent: prod node_modules are reinstalled only when the lockfile or the
 // arch changes, the Node tarball is cached under .cache/, and the icon is
@@ -38,6 +47,40 @@ if (arch !== 'arm64' && arch !== 'x64') die(`--arch must be arm64 or x64, got ${
 if (process.platform !== 'darwin') die('Junior.app builds on macOS only')
 
 const version = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8')).version
+const identity = findIdentity()
+const notary = notaryArgs()
+if (flag('--release')) {
+  if (!identity) die('--release needs a "Developer ID Application" identity in the keychain')
+  if (!notary) die('--release needs APPLE_API_KEY + APPLE_API_KEY_ID + APPLE_API_ISSUER, or APPLE_KEYCHAIN_PROFILE')
+}
+
+/** The Developer ID to sign with, or null for ad-hoc. */
+function findIdentity() {
+  if (process.env.JUNIOR_SIGN === 'adhoc') return null
+  const want = process.env.JUNIOR_SIGN_IDENTITY?.trim()
+  const out = spawnSync('security', ['find-identity', '-v', '-p', 'codesigning'], { encoding: 'utf8' }).stdout ?? ''
+  for (const line of out.split('\n')) {
+    const m = line.match(/^\s*\d+\)\s+([0-9A-F]{40})\s+"(.+)"$/)
+    if (!m) continue
+    const [, hash, name] = m
+    if (!name.startsWith('Developer ID Application:')) continue
+    if (want && hash !== want && !name.includes(want)) continue
+    return { hash, name }
+  }
+  if (want) die(`no "Developer ID Application" identity matching JUNIOR_SIGN_IDENTITY=${want} in the keychain`)
+  return null
+}
+
+/** notarytool's credential flags, from the same env electron-builder reads. */
+function notaryArgs() {
+  const { APPLE_API_KEY: key, APPLE_API_KEY_ID: keyId, APPLE_API_ISSUER: issuer } = process.env
+  if (key && keyId && issuer) return ['--key', key, '--key-id', keyId, '--issuer', issuer]
+  const profile = process.env.APPLE_KEYCHAIN_PROFILE
+  if (profile) {
+    return ['--keychain-profile', profile, ...(process.env.APPLE_KEYCHAIN ? ['--keychain', process.env.APPLE_KEYCHAIN] : [])]
+  }
+  return null
+}
 
 // ---- log helpers
 
@@ -80,6 +123,8 @@ function dirSize(dir) {
 }
 
 console.log(bold(`Junior.app ${version} · mac-${arch}`))
+console.log(dim(`  signing: ${identity ? identity.name : 'ad-hoc (no Developer ID in the keychain)'}`))
+console.log(dim(`  notarize: ${identity && notary ? 'yes' : 'no'}`))
 
 // ---- 1. root build
 
@@ -242,6 +287,7 @@ const outDir = path.join(desktop, 'release', arch === 'x64' ? 'mac' : `mac-${arc
 const app = path.join(outDir, 'Junior.app')
 {
   const args = ['--mac', 'dir', `--${arch}`, '--publish', 'never', `-c.extraMetadata.version=${version}`]
+  if (identity) args.push(`-c.mac.identity=${identity.hash}`)
   // Reuse the Electron that npm already installed when it matches the target.
   const localElectron = path.join(desktop, 'node_modules/electron/dist')
   if (arch === process.arch && existsSync(path.join(localElectron, 'Electron.app'))) {
@@ -253,18 +299,34 @@ const app = path.join(outDir, 'Junior.app')
     env: { ...process.env, CSC_IDENTITY_AUTO_DISCOVERY: 'false' },
   })
   if (!existsSync(app)) die(`electron-builder did not produce ${rel(app)}`)
-  // The npm-installed Electron still carries its "drop an app here" shell.
-  rmSync(path.join(app, 'Contents/Resources/default_app.asar'), { force: true })
   // extraResources is filtered, so check the runtime actually made it in.
   for (const p of ['node/bin/node', 'junior/dist/server/cli.js', 'junior/node_modules/node-pty/package.json', 'junior/node_modules/@anthropic-ai/claude-agent-sdk/package.json']) {
     if (!existsSync(path.join(app, 'Contents/Resources', p))) die(`Resources/${p} is missing from the app`)
   }
 }
 
-// ---- 7. ad-hoc sign
+// ---- 7. sign
 
-step('ad-hoc sign')
-{
+step(identity ? 'check the Developer ID signature' : 'ad-hoc sign')
+if (identity) {
+  // electron-builder signed (and, with credentials, notarized and stapled) it.
+  const verify = spawnSync('codesign', ['--verify', '--deep', '--strict', '--verbose=2', app], { encoding: 'utf8' })
+  if (verify.status !== 0) die(`codesign --verify failed:\n${verify.stderr}`)
+  note(`${green('✓')} codesign --verify --deep --strict`)
+  const info = spawnSync('codesign', ['-dv', app], { encoding: 'utf8' }).stderr
+  const team = info.match(/TeamIdentifier=(\S+)/)?.[1]
+  if (!info.includes('runtime')) die('the app is not signed with the hardened runtime')
+  note(`team ${team} · hardened runtime`)
+  if (notary) {
+    const staple = spawnSync('xcrun', ['stapler', 'validate', app], { encoding: 'utf8' })
+    if (staple.status !== 0) die(`the app has no notarization ticket stapled:\n${staple.stdout}${staple.stderr}`)
+    const assess = spawnSync('spctl', ['--assess', '--type', 'execute', '--verbose', app], { encoding: 'utf8' })
+    if (assess.status !== 0) die(`Gatekeeper rejects the app:\n${assess.stderr}`)
+    note(`${green('✓')} notarized, ticket stapled, Gatekeeper accepts it`)
+  } else {
+    note(dim('not notarized (no Apple credentials in the environment): fine on this Mac, blocked on others'))
+  }
+} else {
   // `codesign --deep` only descends into nested bundles, not plain Mach-O
   // files under Resources (node, node-pty, the Agent SDK's claude). Anything
   // there without a valid signature is signed ad-hoc first; binaries that
@@ -283,6 +345,19 @@ step('ad-hoc sign')
   note(`${green('✓')} codesign --verify --deep --strict`)
   const assess = spawnSync('spctl', ['--assess', '--type', 'execute', app], { encoding: 'utf8' })
   note(dim(`spctl: ${assess.status === 0 ? 'accepted' : 'rejected (expected: ad-hoc, no Developer ID)'}`))
+}
+
+// The hardened runtime kills a JIT that lacks its entitlement on first run, so
+// run the two runtimes the daemon depends on, when this host can.
+if (arch === process.arch) {
+  const res = path.join(app, 'Contents/Resources')
+  const nodeBin = path.join(res, 'node/bin/node')
+  const r = spawnSync(nodeBin, ['-e', "require('node:sqlite'); require(process.argv[1]); console.log('ok')", path.join(res, 'junior/node_modules/node-pty')], { encoding: 'utf8', timeout: 30_000 })
+  if (r.status !== 0) die(`the bundled node does not run as signed:\n${r.stderr || r.signal}`)
+  const claude = path.join(res, `junior/node_modules/@anthropic-ai/claude-agent-sdk-darwin-${arch}/claude`)
+  const c = spawnSync(claude, ['--version'], { encoding: 'utf8', timeout: 30_000 })
+  if (c.status !== 0) die(`the bundled claude does not run as signed:\n${c.stderr || c.signal}`)
+  note(`${green('✓')} bundled node (node:sqlite, node-pty) and claude ${c.stdout.trim()} run`)
 }
 
 function findMachO(dir) {
@@ -323,6 +398,18 @@ if (flag('--dmg')) {
   rmSync(dmg, { force: true })
   run('hdiutil', ['create', '-quiet', '-volname', 'Junior', '-srcfolder', src, '-ov', '-format', 'UDZO', dmg])
   rmSync(src, { recursive: true, force: true })
+  if (identity) {
+    run('codesign', ['--sign', identity.hash, '--timestamp', dmg])
+    if (notary) {
+      // The app inside is already stapled; this lets the dmg itself open
+      // offline without a Gatekeeper round trip.
+      run('xcrun', ['notarytool', 'submit', dmg, ...notary, '--wait'])
+      run('xcrun', ['stapler', 'staple', dmg])
+      const assess = spawnSync('spctl', ['--assess', '--type', 'open', '--context', 'context:primary-signature', dmg], { encoding: 'utf8' })
+      if (assess.status !== 0) die(`Gatekeeper rejects the dmg:\n${assess.stderr}`)
+      note(`${green('✓')} dmg signed, notarized and stapled`)
+    }
+  }
 }
 console.log(dim(`  done in ${((Date.now() - stepStart) / 1000).toFixed(1)}s`))
 

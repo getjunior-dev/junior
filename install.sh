@@ -354,7 +354,11 @@ main() {
   xattr -dr com.apple.quarantine "$new" 2>/dev/null || true
   spin "checking the signature" codesign --verify --deep --strict "$new" 2>/dev/null ||
     die "$APP failed its signature check — something changed it after we built it, so we're not installing it"
-  ok "signature checks out ${DIM}(ad-hoc — paying Apple \$99 is on the roadmap)${RESET}"
+  if codesign -dv "$new" 2>&1 | grep -q '^TeamIdentifier=[A-Z0-9]'; then
+    ok "signature checks out ${DIM}(Developer ID, notarized)${RESET}"
+  else
+    ok "signature checks out ${DIM}(ad-hoc: a local or preview build)${RESET}"
+  fi
 
   if [ -n "${JUNIOR_INSTALL_DIR:-}" ]; then
     dir="$JUNIOR_INSTALL_DIR"
