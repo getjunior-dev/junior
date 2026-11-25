@@ -60,6 +60,32 @@ h2.frTitle { margin: 0; font-family: var(--display); -webkit-text-stroke: var(--
 .frGo:disabled { opacity: 0.45; cursor: default; }
 .frGo:focus-visible, .frNotNow:focus-visible, .frSkip:focus-visible, .frLink:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 
+/* The tour: Meet, Team, Setup. Rows on one hairline card, like the setup screen's permission row. */
+.frAdvance { display: inline-flex; align-items: center; gap: 6px; }
+.frRows { width: min(520px, 100%); margin: 22px 0 0; padding: 0; list-style: none; border: 1px solid var(--hair-strong); border-radius: var(--r-lg); background: var(--wash-1); }
+.frRows li { display: flex; flex-direction: column; gap: 3px; padding: 12px 16px; }
+.frRows li + li { border-top: 1px solid var(--hair); }
+.frRows b { font-weight: 500; color: var(--ink); }
+.frRows span { color: var(--mute); font-size: 0.9231rem; line-height: 1.45; }
+.frSeen li { display: grid; grid-template-columns: 128px 1fr; align-items: baseline; gap: 12px; }
+.frSeen b { display: inline-flex; align-items: center; gap: 8px; }
+.frSeen b i { width: 6px; height: 6px; border-radius: 50%; background: var(--stone); flex: none; }
+.frSeen b i.on { background: var(--green); }
+.frSeen b i.wait { background: var(--ash); animation: frPulse 1.2s ease-in-out infinite; }
+@keyframes frPulse { 50% { opacity: 0.3; } }
+@media (prefers-reduced-motion: reduce) { .frSeen b i.wait { animation: none; } }
+.frChat { display: inline-flex; align-items: center; gap: 6px; margin-top: 18px; height: 36px; }
+
+.frTeam { width: min(520px, 100%); margin: 20px 0 0; padding: 4px 0; list-style: none; border: 1px solid var(--hair-strong); border-radius: var(--r-lg); background: var(--wash-1); }
+.frTeam li { display: grid; grid-template-columns: 30px 136px 1fr; align-items: center; gap: 12px; padding: 7px 14px; }
+.frTeam b { font-weight: 500; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.frTeam span { color: var(--mute); font-size: 0.9231rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.frTeamAdd i { display: grid; place-items: center; width: 30px; height: 30px; border: 1px dashed var(--hair-bright); border-radius: var(--r); color: var(--ash); }
+.frTeamAdd b { color: var(--mute); }
+.frFlow { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 18px; margin: 18px 0 0; padding: 0; list-style: none; font-size: 0.9231rem; color: var(--mute); }
+.frFlow li { display: inline-flex; align-items: center; gap: 8px; }
+.frFlow i { display: grid; place-items: center; width: 20px; height: 20px; border: 1px solid var(--hair-strong); border-radius: var(--r-full); font-family: var(--mono); font-style: normal; font-size: 0.7692rem; color: var(--ash); }
+
 @media (max-width: 767px) {
   .frCard { inset: 0; top: 0; left: 0; transform: none; width: auto; min-height: 0; max-height: none; border-radius: 0; border: 0; }
 }

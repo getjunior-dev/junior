@@ -82,7 +82,7 @@ import { AddTeammate } from './components/AddTeammate.js'
 import { UpdatePrompt } from './components/UpdatePrompt.js'
 import { FIRST_RUN_STEPS, FirstRun } from './components/FirstRun.js'
 import { useAccount } from './account.js'
-import { pendingSteps } from './firstRun.js'
+import { pendingSteps, useToured } from './firstRun.js'
 import { JUNIOR_DM, dmAgent, dmKey, findDm } from '../../core/junior/dms.js'
 import { agentThreads } from '../../core/junior/threads.js'
 import { TeamRail, TeamSidebar, type SidebarPlace } from './components/TeamSidebar.js'
@@ -182,9 +182,10 @@ export function App() {
   // for the sections whose list *is* the panel (see onRailGo); it closes on
   // any navigation, which is how picking a row in it lands you on the row.
   const mobile = useIsMobile()
-  // First run (firstRun.ts): your Junior account before the workspace's Claude check. Not on a phone.
+  // First run (firstRun.ts): your Junior account, then the tour on a new Mac, before the workspace's Claude check. Not on a phone.
   const account = useAccount()
-  const firstRunOpen = !mobile && (account === null || pendingSteps(FIRST_RUN_STEPS, account).length > 0)
+  const toured = useToured()
+  const firstRunOpen = !mobile && (account === null || pendingSteps(FIRST_RUN_STEPS, { account, onboarded, toured }).length > 0)
   // Queued actions waiting on you: they set Junior's face on the rail.
   const pendingActions = usePendingActions()
   // Junior's name and face, everywhere it shows: the rail and the phone's title.
@@ -1131,7 +1132,7 @@ export function App() {
       </div>
 
       <UpdatePrompt />
-      {!mobile && <FirstRun />}
+      {!mobile && <FirstRun navigate={navigate} />}
 
       <AddTeammate
         open={addMateOpen}

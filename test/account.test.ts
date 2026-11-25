@@ -9,7 +9,8 @@ import os from 'node:os'
 import path from 'node:path'
 import { authenticate, checkSession, endSession, type Fetch } from '../core/account/client.js'
 import { readStored, stateOf, writeStored } from '../core/account/store.js'
-import { pendingSteps, type FirstRunStep } from '../web/src/firstRun.js'
+import { pendingSteps, tourPending, type FirstRunStep } from '../web/src/firstRun.js'
+import type { AccountState } from '../shared/protocol.js'
 
 const BASE = 'https://getjunior.dev'
 const ACCOUNT = { id: 'a1', email: 'sam@example.com', name: 'Sam', createdAt: '2026-11-25T00:00:00.000Z' }
@@ -110,11 +111,33 @@ test('first run opens on the account step only while the account is unanswered',
     { id: 'account', pending: ({ account }) => account.status === 'none', render: () => null, skip: async () => {} },
     { id: 'later', pending: () => true, render: () => null, skip: async () => {} },
   ]
+  const at = (account: AccountState) => ({ account, onboarded: true, toured: false })
   assert.deepEqual(pendingSteps(steps, null), [])
-  assert.deepEqual(pendingSteps(steps, { status: 'none', server: BASE }).map((s) => s.id), ['account', 'later'])
-  assert.deepEqual(pendingSteps(steps, { status: 'skipped', server: BASE }).map((s) => s.id), ['later'])
+  assert.deepEqual(pendingSteps(steps, at({ status: 'none', server: BASE })).map((s) => s.id), ['account', 'later'])
+  assert.deepEqual(pendingSteps(steps, at({ status: 'skipped', server: BASE })).map((s) => s.id), ['later'])
   assert.deepEqual(
-    pendingSteps(steps, { status: 'signed-in', server: BASE, account: { id: 'a', email: 'e', name: '' } }).map((s) => s.id),
+    pendingSteps(steps, at({ status: 'signed-in', server: BASE, account: { id: 'a', email: 'e', name: '' } })).map((s) => s.id),
     ['later'],
   )
+})
+
+test('the tour follows the account only on a Mac that never ran Junior, until it is answered once', () => {
+  const steps: FirstRunStep[] = [
+    { id: 'account', pending: ({ account }) => account.status === 'none', render: () => null, skip: async () => {} },
+    { id: 'meet', pending: tourPending, render: () => null, skip: async () => {} },
+    { id: 'setup', pending: tourPending, render: () => null, skip: async () => {} },
+  ]
+  const none: AccountState = { status: 'none', server: BASE }
+  const signedIn: AccountState = { status: 'signed-in', server: BASE, account: { id: 'a', email: 'e', name: '' } }
+  const rows: [AccountState, boolean, boolean, string[]][] = [
+    // account, onboarded, toured → open steps
+    [none, false, false, ['account', 'meet', 'setup']], // a new Mac: sign up, then the tour
+    [signedIn, false, false, ['meet', 'setup']], // signed in, first run: the tour is still open
+    [none, true, false, ['account']], // already using Junior: the account only, no tour
+    [signedIn, false, true, []], // the tour was finished or skipped
+    [signedIn, true, true, []],
+  ]
+  for (const [account, onboarded, toured, want] of rows) {
+    assert.deepEqual(pendingSteps(steps, { account, onboarded, toured }).map((s) => s.id), want, JSON.stringify({ status: account.status, onboarded, toured }))
+  }
 })
